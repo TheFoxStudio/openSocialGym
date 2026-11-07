@@ -4,6 +4,25 @@ Newest first. Each release is a `## vX.Y.Z (YYYY-MM-DD)` section, and the releas
 GitHub and GitLab are that section, word for word. New work goes under `## Unreleased` until the
 tag. Write it for the people using the app: what changed for them, short, no em dashes.
 
+## Unreleased
+
+Home now starts with weekly workout and training-time statistics, a link to detailed
+Stats, and the Following feed with more posts loaded as you scroll. The previous
+dashboard remains available through Stats → Training overview.
+
+The fork uses the new blue workout/checkmark icon across web, phone and watch
+assets, launch screens, notifications and store artwork. The default accent is
+the icon's blue, with accessible button text and optional color variants.
+
+**openSocialGym fork:** Create a social profile, follow friends, and share completed
+workouts with an optional photo. A Following timeline shows shared workouts.
+Members can block or report content, administrators can remove reported content,
+and accounts can export their social data. Private workout tracking remains available.
+
+Self-hosting builds this fork's images locally. Offline instance backup, checksum
+verification, clean restore, storage diagnostics and a feed performance probe are
+available. Native phone acceptance and production deployment are still pending.
+
 ## v1.4.4 (2026-11-03)
 
 **Modules: as much app as you want.** Settings → Modules switches whole parts of openGym on and

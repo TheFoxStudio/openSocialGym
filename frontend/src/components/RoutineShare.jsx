@@ -176,7 +176,7 @@ const BOOT = (() => {
 
 /**
  * Listens for routine links for the whole app: the one the web app opened with, a later
- * #/r/... in the address bar, and in the phone apps opengym://r#... and https://opengym.ch/r#...
+ * #/r/... in the address bar, and in the phone apps opengym://r#... and https://gym.orktork.space/r#...
  * One that arrives before the app is set up waits until it is.
  */
 export function useRoutineLinks(ready) {

@@ -1,6 +1,6 @@
 // Drawing helpers shared by the screens. Garmin screens are small and many are memory-in-pixel
 // (MIP: 64 colours, read in sunlight) or, on the Instinct, black and white: big numbers, white on
-// black, the lime accent only where it means something (the value you are changing, Done, a
+// black, the blue accent only where it means something (the value you are changing, Done, a
 // streak kept). The monochrome watches build with the (:mono) functions (monkey.jungle).
 import Toybox.Graphics;
 import Toybox.Lang;
@@ -9,15 +9,15 @@ import Toybox.System;
 import Toybox.WatchUi;
 
 module Ui {
-    //! openGym's green on AMOLED (the app's --green); on MIP the palette's own bright lime, which
-    //! shows as it is instead of being rounded to a dull green.
+    //! openSocialGym's blue on AMOLED; on MIP the palette's cyan-blue, which
+    //! shows as it is instead of being rounded to a dull color.
     (:color)
     function accent() {
         var ds = System.getDeviceSettings();
         if ((ds has :requiresBurnInProtection) && ds.requiresBurnInProtection) {
-            return 0x30D158;
+            return 0x13A5FD;
         }
-        return 0x55FF55;
+        return 0x00AAFF;
     }
     (:mono)
     function accent() {

@@ -2,6 +2,7 @@
 frontend/dist
 media
 data
+.instance-backups
 .env
 .git
 *.log

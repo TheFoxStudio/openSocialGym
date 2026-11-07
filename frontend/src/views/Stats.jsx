@@ -880,6 +880,7 @@ export default function Stats() {
     {/* The page in four parts (redesign 1.4.5, P5), each with its own heading, and a sticky index
         that jumps to them and follows the scroll. It is still one page: every card is where a
         scroll finds it. /stats?section=lifts (and body, effort) opens on that part. */}
+    <Button size="sm" variant="ghost" icon="calendar" onClick={() => nav('/training')}>{t('Training overview')}</Button>
     <StatsIndex sections={sections} />
 
     <section className="stats-sect" id="stats-overview" data-stats-sect="overview" aria-label={t('Overview')}>
@@ -937,7 +938,7 @@ export default function Stats() {
       {S.bodyweight.length > 0 && <WeightRate S={S} />}
       {/* every weigh-in, week by week with its average (Discord 'Weight') */}
       {S.bodyweight.length > 0 && <div className="row" style={{ justifyContent: 'flex-end', marginTop: 4 }}>
-        <Button size="sm" variant="ghost" trailingIcon="chevronRight" onClick={weighInsSheet}>{t('All weigh-ins')}</Button>
+        <Button size="sm" variant="ghost" trailingIcon="chevronRight" data-tour="stats-weighins" onClick={weighInsSheet}>{t('All weigh-ins')}</Button>
       </div>}
       <SeasonDeco spot="stats-web" />
     </div>

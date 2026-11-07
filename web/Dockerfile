@@ -19,6 +19,9 @@ COPY frontend/package.json frontend/package-lock.json* ./
 # tool is now run with npx, docs/MOBILE.md, and not installed here).
 RUN npm ci --ignore-scripts
 COPY api/coach/core/ /app/api/coach/core/
+# Runtime-independent post allowlist shared by the preview and server. Never copy Node-only
+# social storage/routes into the frontend build dependency tree.
+COPY api/social/snapshot.js api/social/errors.js /app/api/social/
 COPY frontend/ ./
 # Which build this is, shown in the app as "1.3.8+<build>" next to the version. Without it every
 # image built between two releases calls itself the same thing, and "which build are you running?"
@@ -58,12 +61,12 @@ ARG VERSION=dev
 ARG VCS_REF=dev
 ARG BUILD_DATE=unknown
 
-LABEL maintainer="Duarte Santos https://github.com/DuarteSantos8" \
-    org.opencontainers.image.title="opengym-web" \
+LABEL maintainer="TheFoxStudio https://github.com/TheFoxStudio" \
+    org.opencontainers.image.title="opensocialgym-web" \
     org.opencontainers.image.description="Frontend for Self-hosted gym & body-weight tracker — plan routines, log workouts (supersets & cardio too), track your weight and progress, passkey login. Your data, your server." \
-    org.opencontainers.image.source="https://github.com/DuarteSantos8/openGym" \
-    org.opencontainers.image.url="https://opengym.ch" \
-    org.opencontainers.image.documentation="https://github.com/DuarteSantos8/openGym#readme" \
+    org.opencontainers.image.source="https://github.com/TheFoxStudio/openSocialGym" \
+    org.opencontainers.image.url="https://github.com/TheFoxStudio/openSocialGym" \
+    org.opencontainers.image.documentation="https://github.com/TheFoxStudio/openSocialGym#readme" \
     org.opencontainers.image.licenses="AGPL-3.0-or-later" \
     org.opencontainers.image.version=$VERSION \
     org.opencontainers.image.revision=$VCS_REF \

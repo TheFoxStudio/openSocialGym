@@ -23,12 +23,12 @@ describe('Web NFC (Chrome on Android)', () => {
     const write = vi.fn(() => Promise.resolve())
     globalThis.NDEFReader = function NDEFReader() { this.write = write }
     expect((await nfcSupport()).supported).toBe(true)
-    await writeTag('https://opengym.ch/nfc?do=start')
-    expect(write.mock.calls[0][0]).toEqual({ records: [{ recordType: 'url', data: 'https://opengym.ch/nfc?do=start' }] })
+    await writeTag('https://gym.orktork.space/nfc?do=start')
+    expect(write.mock.calls[0][0]).toEqual({ records: [{ recordType: 'url', data: 'https://gym.orktork.space/nfc?do=start' }] })
   })
 
   it('rejects with a code the sheet understands', async () => {
     globalThis.NDEFReader = function NDEFReader() { this.write = () => Promise.reject(Object.assign(new Error('no'), { name: 'NotAllowedError' })) }
-    await expect(writeTag('https://opengym.ch/nfc?do=start')).rejects.toMatchObject({ code: 'denied' })
+    await expect(writeTag('https://gym.orktork.space/nfc?do=start')).rejects.toMatchObject({ code: 'denied' })
   })
 })

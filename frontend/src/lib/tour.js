@@ -115,10 +115,10 @@ const CUSTOM = [
 // weigh-in, so poking at them changes nothing of the user's.
 const EDIT = [
   { id: 'e-intro', route: null, anchor: null, sandbox: 'edit' },
-  { id: 'e-go-home', route: null, anchor: 'tab-home', go: '/home', sandbox: 'edit' },
-  { id: 'e-weighins', route: '/home', anchor: 'home-weighins', open: true, sandbox: 'edit', optional: true, until: c => c.sheets > 0 },
-  { id: 'e-weighin', route: '/home', anchor: 'weighin-del', sheet: true, sandbox: 'edit', optional: true },
-  { id: 'e-go-stats', route: '/home', anchor: 'tab-stats', go: '/stats', sandbox: 'edit' },
+  { id: 'e-go-home', route: null, anchor: 'tab-stats', go: '/stats', sandbox: 'edit' },
+  { id: 'e-weighins', route: '/stats', anchor: 'stats-weighins', open: true, sandbox: 'edit', optional: true, until: c => c.sheets > 0 },
+  { id: 'e-weighin', route: '/stats', anchor: 'weighin-del', sheet: true, sandbox: 'edit', optional: true },
+  { id: 'e-go-stats', route: '/stats', anchor: 'tab-stats', go: '/stats', sandbox: 'edit' },
   { id: 'e-history', route: '/stats', anchor: 'stats-history', go: '/history', sandbox: 'edit' },
   { id: 'e-past', route: '/history', anchor: 'history-add', sandbox: 'edit' },
   { id: 'e-row', route: '/history', anchor: 'history-row', open: true, sandbox: 'edit', until: c => c.sheets > 0 },

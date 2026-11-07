@@ -471,10 +471,11 @@ Codex CLI. Everything else in this section is about those two.
 
 `api/Dockerfile` builds two targets from one file:
 
-- **`default`** — what every instance has always had. `npm ci --omit=optional` skips the Agent
-  SDK and its platform runtime entirely, so an owner who never wanted the Coach ships none of it.
-  Around 158 MB.
-- **`coach`** — the same image plus `@anthropic-ai/claude-agent-sdk`. Around 455 MB.
+- **`default`** — the fork installs Sharp's optional image-processing binaries, then removes
+  the Agent SDK and its platform runtime before finishing the dependency layer. An owner
+  who never wanted the Coach ships none of the AI runtime.
+- **`coach`** — the same image plus `@anthropic-ai/claude-agent-sdk`. Image sizes need to be
+  remeasured for the fork's image-processing dependencies.
 
 ```
 docker build --target coach ./api          # or:

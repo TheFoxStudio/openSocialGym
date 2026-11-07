@@ -42,7 +42,7 @@ class OpenGymTileService : TileService() {
 
     companion object {
         private const val RES_VERSION = "1"
-        private const val ACCENT = 0xFF30D158.toInt()
+        private const val ACCENT = 0xFF13A5FD.toInt()
         private const val TEXT = 0xFFFFFFFF.toInt()
         // The quiet grey at 4.5:1 or better on black (the app's design review 1.4.5).
         private const val QUIET = 0xFFA1A1A6.toInt()

@@ -62,6 +62,7 @@ jobs:
               - 'scripts/ci/**'
               - 'frontend/src/**'
               - 'frontend/public/**'
+              - 'frontend/resources/**'
               - 'frontend/scripts/**'
               - 'frontend/index.html'
               - 'frontend/vite.config.js'
@@ -69,6 +70,8 @@ jobs:
               # The phone build and the Coach import the api's shared core.
               - 'api/coach/core/**'
               - 'api/coach/prompts/**'
+              - 'api/social/snapshot.js'
+              - 'api/social/errors.js'
               - 'api/sync-stamps.js'
               - 'api/nudge-copy.js'
               - 'api/server.js'
@@ -80,6 +83,7 @@ jobs:
               - '.github/workflows/test.yml'
               - 'scripts/ci/**'
               - 'api/**'
+              - 'scripts/instance-backup.mjs'
               - 'website/api.html'
               - 'scripts/build-api-docs.mjs'
               - 'website/*.html'
@@ -98,6 +102,10 @@ jobs:
               - 'api/package*.json'
               - 'api/*.js'
               - 'api/coach/**'
+              - 'api/social/**'
+              - 'api/scripts/social-status.mjs'
+              - 'scripts/ci/social-container-smoke.mjs'
+              - 'docker-compose.yml'
               - 'web/**'
               - 'frontend/package*.json'
               - 'frontend/vite.config.js'
@@ -209,7 +217,9 @@ jobs:
             package-lock.json
       # The Coach tests drive the in-repo fixture provider and a local mock of the Chat
       # Completions shape: no AI account, no network. The Agent SDK is optional and stays out.
-      - run: npm ci --omit=optional --no-audit --no-fund
+      - run: |
+          npm ci --no-audit --no-fund
+          npm uninstall --no-save --ignore-scripts @anthropic-ai/claude-agent-sdk
         working-directory: api
       - name: API tests
         working-directory: api
@@ -267,7 +277,9 @@ jobs:
       # log_workout's end-to-end test drives the real api/server.js, so the api's own
       # dependencies are here too (same install as the api job). Without them that test fails
       # under CI rather than skipping, so a green run means it ran.
-      - run: npm ci --no-audit --no-fund --omit=optional
+      - run: |
+          npm ci --no-audit --no-fund
+          npm uninstall --no-save --ignore-scripts @anthropic-ai/claude-agent-sdk
         working-directory: api
       - name: MCP tests
         working-directory: mcp
@@ -363,6 +375,16 @@ jobs:
           tags: opengym-web:ci
           cache-from: type=gha,scope=ci-web
           cache-to: type=gha,mode=max,scope=ci-web
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: social features work in both API targets and survive restart
+        run: |
+          node scripts/ci/social-container-smoke.mjs opengym-api:default
+          node scripts/ci/social-container-smoke.mjs opengym-api:coach
+          cp .env.example .env
+          docker compose config --quiet
 
       - name: the image published as :latest has no AI runtime either
         run: |

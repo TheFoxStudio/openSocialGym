@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createRoot } from 'react-dom/client'
 import { useStore } from '../store/useStore.js'
 import { presetModules } from '../lib/modules.js'
-import Home from './Home.jsx'
+import Home from './TrainingOverview.jsx'
 
 vi.mock('react-router-dom', () => ({ useNavigate: () => vi.fn() }))
 vi.mock('../sheets.jsx', () => ({

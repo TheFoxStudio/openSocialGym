@@ -7,6 +7,7 @@ import { createRoot } from 'react-dom/client'
 import { DEF, useStore } from './store/useStore.js'
 import { useUI } from './store/useUI.js'
 import { finishWorkoutNow } from './sheets.jsx'
+import { setNav } from './lib/nav.js'
 
 const clone = v => JSON.parse(JSON.stringify(v))
 const mounted = []
@@ -32,19 +33,31 @@ beforeEach(() => {
   useStore.setState({ S: st, user: null })
 })
 afterEach(() => {
+  setNav(() => {})
   mounted.splice(0).forEach(r => act(() => r.unmount()))
   document.body.innerHTML = ''
 })
 
 describe('finish summary: Share', () => {
+  it('opens social sharing only after saving the workout, including local mode', async () => {
+    const destinations = []; setNav(to => destinations.push(to))
+    act(() => finishWorkoutNow()); renderTopSheet(); await settle()
+    expect(useStore.getState().S.workouts.some(w => w.id === 'fin')).toBe(true)
+    const social = [...host.querySelectorAll('.fin-actions button')].find(b => b.textContent === 'Share to feed')
+    act(() => social.click())
+    expect(destinations).toEqual(['/social/share/fin'])
+    expect(useStore.getState().S.active).toBeNull()
+    expect(useStore.getState().S.workouts.some(w => w.id === 'fin')).toBe(true)
+  })
   it('sits beside the way out, which still comes right after the numbers', async () => {
     act(() => finishWorkoutNow())
     renderTopSheet()
     await settle()
     const row = host.querySelector('.fin-actions')
     expect(row).toBeTruthy()
-    const [done, share] = row.querySelectorAll('button')
+    const [done, social, share] = row.querySelectorAll('button')
     expect(done.textContent).toBe('Nice!')
+    expect(social.textContent).toBe('Share to feed')
     expect(share.textContent).toBe('Share')
     // Nothing but the numbers and the records list between the title and the way out.
     const tiles = host.querySelector('.tiles.fin')

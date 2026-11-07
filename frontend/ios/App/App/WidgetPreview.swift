@@ -30,7 +30,7 @@ enum WidgetPreview {
     @available(iOS 17.0, *)
     private static func snapshot(today: String, active: String = "null") -> WidgetSnapshot? {
         decode(WidgetSnapshot.self, """
-        {"v":1,"today":"\(today)","weekFrom":"\(today)","weekUntil":"9999-12-31","unit":"kg","accent":"#30d158","ink":"#000000",
+        {"v":1,"today":"\(today)","weekFrom":"\(today)","weekUntil":"9999-12-31","unit":"kg","accent":"#13a5fd","ink":"#000000",
          "days":[{"iso":"\(today)","weekday":"Wednesday","name":"Push Day","count":5,"done":false,"ids":["r1"],"exercises":[
            {"name":"Barbell Bench Press","line":"4 × 6 · 80 kg"},{"name":"Overhead Press","line":"3 × 8 · 45 kg"},
            {"name":"Incline Dumbbell Press","line":"3 × 10 · 26 kg"},{"name":"Lateral Raise","line":"3 × 15 · 10 kg"},
@@ -53,7 +53,7 @@ enum WidgetPreview {
     private static func live(rest: Bool) -> (WorkoutActivityAttributes, WorkoutActivityAttributes.ContentState)? {
         let end = (Date().timeIntervalSince1970 + 75) * 1000
         guard let a = decode(WorkoutActivityAttributes.self, """
-        {"v":2,"wid":"preview","start":null,"accent":"#30d158","ink":"#000000",
+        {"v":2,"wid":"preview","start":null,"accent":"#13a5fd","ink":"#000000",
          "labels":{"done":"Log set","rest":"Rest","next":"Up next","allDone":"All sets done","restOver":"Rest’s over. Next set!",
            "nextExercise":"Next exercise","skipRest":"Skip rest","openApp":"Open openGym for the next set"}}
         """), let s = decode(WorkoutActivityAttributes.ContentState.self, """
@@ -70,7 +70,7 @@ enum WidgetPreview {
     @available(iOS 17.0, *)
     private static func liveV1() -> (WorkoutActivityAttributes, WorkoutActivityAttributes.ContentState)? {
         guard let a = decode(WorkoutActivityAttributes.self, """
-        {"v":1,"wid":"preview","start":null,"accent":"#30d158","ink":"#000000",
+        {"v":1,"wid":"preview","start":null,"accent":"#13a5fd","ink":"#000000",
          "labels":{"done":"Done","rest":"Rest","next":"Up next","allDone":"All sets done","restOver":"Rest’s over. Next set!"}}
         """), let s = decode(WorkoutActivityAttributes.ContentState.self, """
         {"name":"Push Day","cur":null,"ahead":[],"restEndsAt":null,"restLeft":null,"restTotal":null,"done":8,"total":17}
@@ -144,7 +144,7 @@ enum WidgetPreview {
         if case let (a, s)? = live(rest: true) {
             save("island-compact", CGSize(width: 250, height: 37), dark: true, radius: 18.5, padding: 8) {
                 HStack {
-                    Image(systemName: "dumbbell.fill").foregroundStyle(Color(hex: a.accent) ?? .green)
+                    Image(systemName: "dumbbell.fill").foregroundStyle(Color(hex: a.accent) ?? Color(red: 19.0/255, green: 165.0/255, blue: 253.0/255))
                     Spacer()
                     LiveCompactTrailing(attributes: a, state: s)
                 }

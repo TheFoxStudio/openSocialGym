@@ -72,7 +72,7 @@ describe('setting up a sticker', () => {
     // Without a membership code there is nothing to check in with: only the start choice shows.
     expect(host.textContent).not.toContain('Just check in')
     await click(button('Write sticker'))
-    expect(writeTag).toHaveBeenCalledWith('https://opengym.ch/nfc?do=start', expect.objectContaining({ alert: expect.any(String) }))
+    expect(writeTag).toHaveBeenCalledWith('https://gym.orktork.space/nfc?do=start', expect.objectContaining({ alert: expect.any(String) }))
     expect(host.textContent).toContain('Sticker ready')
   })
 
@@ -85,7 +85,7 @@ describe('setting up a sticker', () => {
     expect(host.textContent).toContain('Which code')
     await click(button('City'))
     await click(button('Write sticker'))
-    expect(writeTag).toHaveBeenCalledWith('https://opengym.ch/nfc?do=checkin&card=c1', expect.anything())
+    expect(writeTag).toHaveBeenCalledWith('https://gym.orktork.space/nfc?do=checkin&card=c1', expect.anything())
   })
 
   it('a failed write says why and offers to try again; a cancel goes quietly back', async () => {
@@ -104,13 +104,13 @@ describe('setting up a sticker', () => {
     nfcExerciseSheet(EXIDX[EX_B])
     await openSheet()
     await click(button('Write sticker'))
-    expect(writeTag).toHaveBeenCalledWith('https://opengym.ch/nfc?ex=' + EX_B, expect.anything())
+    expect(writeTag).toHaveBeenCalledWith('https://gym.orktork.space/nfc?ex=' + EX_B, expect.anything())
   })
 })
 
 describe('a tapped sticker', () => {
   it('starts today’s workout through the usual Start', () => {
-    expect(handleTagLink('https://opengym.ch/nfc?do=start', 1000)).toBe(true)
+    expect(handleTagLink('https://gym.orktork.space/nfc?do=start', 1000)).toBe(true)
     expect(startFlow).toHaveBeenCalledWith(['r1'])
   })
 
@@ -122,8 +122,8 @@ describe('a tapped sticker', () => {
   })
 
   it('the same tap twice does it once', () => {
-    handleTagLink('https://opengym.ch/nfc?do=start', 1000)
-    handleTagLink('https://opengym.ch/nfc?do=start', 1300)
+    handleTagLink('https://gym.orktork.space/nfc?do=start', 1000)
+    handleTagLink('https://gym.orktork.space/nfc?do=start', 1300)
     expect(startFlow).toHaveBeenCalledTimes(1)
   })
 
@@ -131,22 +131,22 @@ describe('a tapped sticker', () => {
     nfcStickerSheet()
     await openSheet()
     await click(button('Write sticker'))
-    handleTagLink('https://opengym.ch/nfc?do=start')
+    handleTagLink('https://gym.orktork.space/nfc?do=start')
     expect(startFlow).not.toHaveBeenCalled()
-    handleTagLink('https://opengym.ch/nfc?do=start', Date.now() + 5000)
+    handleTagLink('https://gym.orktork.space/nfc?do=start', Date.now() + 5000)
     expect(startFlow).toHaveBeenCalledTimes(1)
   })
 
   it('a check-in sticker opens the code screen on its card', () => {
     m.S.gymCards = [{ id: 'c1' }, { id: 'c2' }]
-    handleTagLink('https://opengym.ch/nfc?do=checkin&card=c2', 1000)
+    handleTagLink('https://gym.orktork.space/nfc?do=checkin&card=c2', 1000)
     expect(m.S.lastGymCardId).toBe('c2')
     expect(m.navs).toEqual(['/checkin'])
   })
 
   it('a machine sticker jumps to its exercise in the session', () => {
     m.S.active = { start: 1, cur: 0, entries: [{ id: EX_A, sets: [] }, { id: EX_B, sets: [] }] }
-    handleTagLink('https://opengym.ch/nfc?ex=' + EX_B, 1000)
+    handleTagLink('https://gym.orktork.space/nfc?ex=' + EX_B, 1000)
     expect(m.S.active.cur).toBe(1)
     expect(m.navs).toEqual(['/workout'])
     expect(m.toasts).toHaveLength(1)
@@ -154,7 +154,7 @@ describe('a tapped sticker', () => {
 
   it('asks before adding an exercise the session does not have', () => {
     m.S.active = { start: 1, cur: 0, routineIds: [], entries: [{ id: EX_A, sets: [{ w: 20, r: 5 }] }] }
-    handleTagLink('https://opengym.ch/nfc?ex=' + EX_B, 1000)
+    handleTagLink('https://gym.orktork.space/nfc?ex=' + EX_B, 1000)
     expect(confirmSheet).toHaveBeenCalledTimes(1)
     expect(m.S.active.entries).toHaveLength(1)
     confirmSheet.mock.calls[0][0].onConfirm()
@@ -168,7 +168,7 @@ describe('a tapped sticker', () => {
   })
 
   it('an exercise this profile does not have just says so', () => {
-    handleTagLink('https://opengym.ch/nfc?ex=nosuchexercise', 1000)
+    handleTagLink('https://gym.orktork.space/nfc?ex=nosuchexercise', 1000)
     expect(exerciseDetailSheet).not.toHaveBeenCalled()
     expect(m.toasts).toHaveLength(1)
   })
@@ -183,12 +183,26 @@ describe('a tapped sticker', () => {
     vi.useFakeTimers()
     try {
       await render(<Probe ready={false} />)
-      m.onLink('https://opengym.ch/nfc?do=start')
+      m.onLink('https://gym.orktork.space/nfc?do=start')
       expect(startFlow).not.toHaveBeenCalled()
       await render(<Probe ready={true} />)
       await act(async () => { vi.runAllTimers() })
       expect(startFlow).toHaveBeenCalledWith(['r1'])
     } finally { vi.useRealTimers() }
+  })
+
+  it('handles a cold browser NFC link after sign-in is ready', async () => {
+    function Probe({ ready }) { useNfcTagLinks(ready); return null }
+    const original = globalThis.location.href
+    vi.useFakeTimers()
+    try {
+      globalThis.location.href = 'https://gym.orktork.space/nfc?do=start'
+      await render(<Probe ready={false} />)
+      expect(startFlow).not.toHaveBeenCalled()
+      await render(<Probe ready={true} />)
+      await act(async () => { vi.runAllTimers() })
+      expect(startFlow).toHaveBeenCalledWith(['r1'])
+    } finally { globalThis.location.href = original; vi.useRealTimers() }
   })
 })
 

@@ -250,7 +250,7 @@ describe('workout detail: one options row instead of a column of buttons', () =>
     const groups = [...menu.querySelectorAll('.menu-group')].map(g => [...g.querySelectorAll('.menu-item .tt')].map(e => e.textContent))
     expect(groups).toEqual([
       ['Change date & time', 'Change duration', 'Save as routine'],
-      ['Share with a friend', 'Share as image', 'Copy as text', 'Save as PDF', 'Export as .fit file'],
+      ['Share to feed', 'Share with a friend', 'Share as image', 'Copy as text', 'Save as PDF', 'Export as .fit file'],
       ['Delete workout'],
     ])
     expect(menu.querySelector('.menu-item.danger .tt').textContent).toBe('Delete workout')

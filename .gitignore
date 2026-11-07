@@ -36,6 +36,7 @@ frontend/bundle-size.json
 docs/superpowers/plans/
 
 # Python and Kotlin build leftovers (scripts/, the Android build)
+.instance-backups/
 __pycache__/
 *.pyc
 .kotlin/

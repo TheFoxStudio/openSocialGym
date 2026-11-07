@@ -86,7 +86,7 @@ export function CfAccessSheet({ close, server = '' }) {
 // `again`: a phone whose server stopped accepting it (components/ServerSync.jsx pairAgain) — the
 // address it had is filled in when it still has one, so only the new code is left to type, and
 // the sheet says that what the phone kept is merged, not replaced.
-export function ConnectSheet({ close, initialUrl = '', again = false }) {
+export function ConnectSheet({ close, initialUrl = 'https://gym.orktork.space', again = false }) {
   const { connectToServer } = useStore()
   const [url, setUrl] = useState(initialUrl)
   const [code, setCode] = useState('')

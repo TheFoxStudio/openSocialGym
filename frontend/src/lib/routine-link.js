@@ -1,4 +1,4 @@
-// "Share with a friend" (v1.4.4): one routine as a link, https://opengym.ch/r#<payload>.
+// "Share with a friend" (v1.4.4): one routine as a link, https://gym.orktork.space/r#<payload>.
 //
 // The payload is a plan file (lib/plan-share.js buildPlanBundle) holding just that routine, so it
 // carries the same `opengym_plan` format version and the receiving app reads it with the same
@@ -8,9 +8,9 @@
 //   <payload> = <link format>.<encoding>.<base64url>      e.g. 1.d.q1YqzkxRslIqS...
 //   encoding  d = deflate-raw (CompressionStream), j = plain JSON (a browser without one)
 //
-// It lives in the URL FRAGMENT: browsers never send that part to a server, so opengym.ch only
+// It lives in the URL FRAGMENT: browsers never send that part to a server, so gym.orktork.space only
 // serves the page (website/r/index.html) and never sees the routine. The same payload opens the
-// app as opengym://r#<payload>, Android's https://opengym.ch/r filter, or a web app at
+// app as opengym://r#<payload>, Android's https://gym.orktork.space/r filter, or a web app at
 // <server>/#/r/<payload>.
 //
 // Besides the plan file, the bundle carries two things an older app simply ignores: `from`, the
@@ -21,7 +21,7 @@ import { buildPlanBundle, parsePlan, mergePlan } from './plan-share.js'
 import { t } from './i18n-core.js'
 
 export const LINK_FMT = 1
-export const LINK_BASE = 'https://opengym.ch/r'
+export const LINK_BASE = 'https://gym.orktork.space/r'
 // Past this a link starts breaking in chat apps and SMS: the share falls back to a plan file.
 export const MAX_LINK = 2000
 // What a link may hold at all, before and after inflating: far past any real routine.
@@ -174,7 +174,7 @@ const PAYLOAD_RE = /^\d{1,4}\.[a-z]\.[A-Za-z0-9_-]+$/
 
 /**
  * The payload of a routine link, or null for anything else. Never throws. Reads
- *   https://opengym.ch/r#P  https://opengym.ch/r/#P  (www. too)
+ *   https://gym.orktork.space/r#P  https://gym.orktork.space/r/#P  (www. too)
  *   opengym://r#P  opengym://r/#P
  *   any web app's  .../#/r/P  (the hash route the website's "Open in the web app" uses)
  */
@@ -189,7 +189,7 @@ export function routinePayloadFromUrl(raw) {
   if (route) return ok(route[1])
   if (proto === 'https:' || proto === 'http:') {
     const host = u.hostname.toLowerCase().replace(/^www\./, '')
-    if (host !== 'opengym.ch') return null
+    if (host !== 'gym.orktork.space') return null
     if (u.pathname.replace(/\/index\.html$/, '').replace(/\/+$/, '') !== '/r') return null
     return ok(hash)
   }

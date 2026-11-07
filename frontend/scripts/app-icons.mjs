@@ -1,28 +1,16 @@
 #!/usr/bin/env node
-/* The alternate home-screen icons (Settings → Look & Home → App icon), drawn from
- * src/lib/app-icon-variants.js and the dumbbell in resources/icon.svg.
- *
- * The glyph is five rectangles, so this draws them itself (4x4 to 8x8 samples per pixel for the
- * edges) and writes the PNGs with node:zlib: no sharp or resvg to install, and the same bytes on
- * every machine, which the test checks. A variant with `art` (Halloween) is a hand-made SVG
- * instead, drawn by the small renderer below (rect, circle, line, polyline, polygon, one radial
- * gradient). Written per variant:
- *   resources/icons/<id>.svg                                  the source (the glyph ones only)
- *   public/app-icons/<id>.png                                 112 px preview for the settings row
- *   ios/App/App/Assets.xcassets/AppIcon-<Name>.appiconset/    1024 px, opaque (Apple refuses alpha)
- *   android/app/src/main/res/mipmap-<dpi>/ic_launcher_<id>{,_round,_foreground}.png
- *   android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_<id>{,_round}.xml
- *   android/app/src/main/res/values/app_icons.xml             the adaptive icons' background colours
- * The default icon keeps the files @capacitor/assets made for it (docs/MOBILE.md); only its
- * preview comes from here.
- *
- * Usage: node scripts/app-icons.mjs            write everything
- *        node scripts/app-icons.mjs --check    exit 1 when a committed file differs from a fresh draw */
+/* Alternate launcher assets use the supplied brand-icon.png artwork.
+ * Default and blue keep its original colors; optional presets tint the same symbol.
+ * PNG encoding and raster decoding use only Node built-ins, including in CI.
+ * Legacy vector rendering helpers remain for the historical seasonal artwork tests.
+ * Run app-icons.mjs and then brand-assets.mjs; both accept --check.
+ */
 import { deflateSync } from 'node:zlib'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { APP_ICON_VARIANTS } from '../src/lib/app-icon-variants.js'
+import { brandPixels } from './brand-raster.mjs'
 
 export const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const RES = 'android/app/src/main/res'
@@ -42,7 +30,13 @@ export function glyph(svg = readFileSync(join(ROOT, 'resources/icon.svg'), 'utf8
 const rgb = hex => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16))
 
 /** One icon `size` px square: the background, the glyph on it, optionally cut to a circle. */
-export function draw(v, size, { round = false, rects = glyph() } = {}) {
+export function draw(v, size, { round = false } = {}) {
+  const original = ['default', 'sky', 'light'].includes(v.id)
+  const color = original ? null : v.id === 'neon' ? v.bg : v.id === 'christmas' ? '#ff453a' : v.fg
+  return png(size, size, brandPixels(size, { round, color }), round ? 4 : 3)
+}
+
+export function drawLegacy(v, size, { round = false, rects = glyph() } = {}) {
   if (v.art) return drawArt(readFileSync(join(ROOT, v.art), 'utf8'), size, { round })
   const k = size <= 256 ? 8 : 4
   const bg = rgb(v.bg), fg = rgb(v.fg)
@@ -203,7 +197,7 @@ const chunk = (type, data) => {
   const crc = Buffer.alloc(4); crc.writeUInt32BE(crc32(body))
   return Buffer.concat([len, body, crc])
 }
-function png(w, h, pixels, ch) {
+export function png(w, h, pixels, ch) {
   const ihdr = Buffer.alloc(13)
   ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4)
   ihdr[8] = 8; ihdr[9] = ch === 4 ? 6 : 2   // 8 bit, RGBA or RGB
@@ -262,7 +256,7 @@ export function files(rects = glyph()) {
   for (const v of APP_ICON_VARIANTS) {
     out.push([`public/app-icons/${v.id}.png`, () => draw(v, PREVIEW, { rects })])
     if (v.id === 'default') continue
-    if (!v.art) out.push([`resources/icons/${v.id}.svg`, () => svgOf(v, rects)])
+    if (!v.art) out.push([`resources/icons/${v.id}.svg`, () => `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024"><image width="1024" height="1024" href="data:image/png;base64,${draw(v, IOS_SIZE).toString('base64')}"/></svg>\n`])
     const set = `ios/App/App/Assets.xcassets/${v.ios}.appiconset`
     out.push([`${set}/Contents.json`, () => iosContents])
     out.push([`${set}/icon-1024.png`, () => draw(v, IOS_SIZE, { rects })])

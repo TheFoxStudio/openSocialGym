@@ -15,7 +15,7 @@ import { RecapHomeCard } from './components/Recap.jsx'
 import { exercisePicker, workoutDetailSheet, calendarSheet } from './sheets.jsx'
 import Library from './views/Library.jsx'
 import MuscleExplorer from './components/MuscleExplorer.jsx'
-import Home from './views/Home.jsx'
+import Home from './views/TrainingOverview.jsx'
 
 const { navSpy } = vi.hoisted(() => ({ navSpy: vi.fn() }))
 vi.mock('react-router-dom', () => ({ useNavigate: () => navSpy, useLocation: () => ({ pathname: '/', state: null, search: '' }), useSearchParams: () => [new URLSearchParams()] }))

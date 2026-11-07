@@ -4,6 +4,14 @@ A map of the code for people about to change it. For running an instance, read
 [SELF_HOSTING.md](SELF_HOSTING.md); for the phone apps, [MOBILE.md](MOBILE.md) and
 [APP_STORES.md](APP_STORES.md).
 
+This fork also includes optional [social profiles](dev/SOCIAL_PROFILES.md), enabled
+with `SOCIAL_ENABLED=1`. `api/social/` stores opt-in profiles and bounded avatars in
+`DATA_DIR/social/social.sqlite` using `node:sqlite`; Sharp reprocesses avatar uploads.
+Explicit [workout publication](dev/SOCIAL_POSTS.md) adds versioned public snapshots,
+author-scoped retries and private post-photo files under `social/post-photos/`.
+The existing JSON training sync and private media routes remain separate. The
+sections below describe the upstream training architecture.
+
 ## The big picture
 
 One React app runs everywhere: in a browser against your server, inside the Android and iPhone

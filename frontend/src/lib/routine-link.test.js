@@ -114,7 +114,7 @@ describe('routine links: size fallback', () => {
   it('a normal routine fits in a link', async () => {
     const link = await routineLink(state(), push, { weights: true })
     expect(link.tooLong).toBeUndefined()
-    expect(link.url.startsWith('https://opengym.ch/r#1.')).toBe(true)
+    expect(link.url.startsWith('https://gym.orktork.space/r#1.')).toBe(true)
     expect(link.length).toBeLessThanOrEqual(MAX_LINK)
   })
 
@@ -135,19 +135,19 @@ describe('routine links: reading a link', () => {
   const P = '1.d.q1YqzkxRslIqS8wpTVWqBQA'
   it('finds the payload in every form the link travels in', () => {
     for (const url of [
-      'https://opengym.ch/r#' + P, 'https://opengym.ch/r/#' + P, 'https://www.opengym.ch/r#' + P,
-      'https://opengym.ch/r/index.html#' + P, 'opengym://r#' + P, 'opengym://r/#' + P, 'OPENGYM://r#' + P,
-      'https://gym.example.org/#/r/' + P, 'http://192.168.1.10:8080/#/r/' + P, 'https://opengym.ch/demo/#/r/' + P,
+      'https://gym.orktork.space/r#' + P, 'https://gym.orktork.space/r/#' + P, 'https://www.gym.orktork.space/r#' + P,
+      'https://gym.orktork.space/r/index.html#' + P, 'opengym://r#' + P, 'opengym://r/#' + P, 'OPENGYM://r#' + P,
+      'https://gym.example.org/#/r/' + P, 'http://192.168.1.10:8080/#/r/' + P, 'https://gym.orktork.space/demo/#/r/' + P,
       linkFor(P),
     ]) expect(routinePayloadFromUrl(url), url).toBe(P)
   })
 
   it('ignores everything else, without throwing', () => {
     for (const url of [
-      'https://opengym.ch/r', 'https://opengym.ch/r#', 'https://opengym.ch/nfc?do=start', 'https://evil.test/r#' + P,
-      'https://opengym.ch/rest#' + P, 'opengym://nfc?do=start', 'opengym://r/extra#' + P, 'opengym://x#' + P,
-      'https://opengym.ch/r#hello', 'https://opengym.ch/r#1.d.<script>', 'javascript:alert(1)', '', null, 42,
-      'https://opengym.ch/r#1.d.' + 'A'.repeat(17000),
+      'https://gym.orktork.space/r', 'https://gym.orktork.space/r#', 'https://gym.orktork.space/nfc?do=start', 'https://evil.test/r#' + P,
+      'https://gym.orktork.space/rest#' + P, 'opengym://nfc?do=start', 'opengym://r/extra#' + P, 'opengym://x#' + P,
+      'https://gym.orktork.space/r#hello', 'https://gym.orktork.space/r#1.d.<script>', 'javascript:alert(1)', '', null, 42,
+      'https://gym.orktork.space/r#1.d.' + 'A'.repeat(17000),
     ]) expect(routinePayloadFromUrl(url), String(url).slice(0, 60)).toBeNull()
   })
 })

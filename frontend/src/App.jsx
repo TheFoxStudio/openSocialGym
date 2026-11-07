@@ -75,6 +75,13 @@ function lazyView(load) {
   }
 }
 const Admin = lazyView(() => import('./views/Admin.jsx'))
+const Profile = lazyView(() => import('./views/Profile.jsx'))
+const People = lazyView(() => import('./views/People.jsx'))
+const PostComposer = lazyView(() => import('./views/PostComposer.jsx'))
+const Posts = lazyView(() => import('./views/Posts.jsx'))
+const Feed = lazyView(() => import('./views/Feed.jsx'))
+const TrainingOverview = lazyView(() => import('./views/TrainingOverview.jsx'))
+const AdminSocial = lazyView(() => import('./views/AdminSocial.jsx'))
 const CoachChat = lazyView(() => import('./views/CoachChat.jsx'))
 const Measurements = lazyView(() => import('./views/Measurements.jsx'))
 const CoachIntake = lazyView(() => import('./views/CoachIntake.jsx'))
@@ -333,6 +340,17 @@ function Shell() {
   const view = l => (!authed ? <Login /> : needsMobileOnboarding ? <MobileOnboarding /> : permSteps ? <PermissionSteps /> : (
     <Routes location={l}>
       <Route path="/home" element={<Home />} />
+      <Route path="/training" element={<TrainingOverview />} />
+      <Route path="/social" element={<Profile />} />
+      <Route path="/social/feed" element={<Feed />} />
+      <Route path="/social/share/:source" element={<PostComposer />} />
+      <Route path="/social/posts/:post" element={<PostComposer />} />
+      <Route path="/social/profiles/:id/posts" element={<Posts />} />
+      <Route path="/social/people" element={<People />} />
+      <Route path="/social/blocks" element={<People kind="blocks" />} />
+      <Route path="/social/profiles/:id/followers" element={<People kind="followers" />} />
+      <Route path="/social/profiles/:id/following" element={<People kind="following" />} />
+      <Route path="/social/profiles/:id" element={<Profile />} />
       {/* A module switched off (Settings → Modules, lib/modules.js) takes its screens with it: the
           route falls through to the catch-all redirect below. The data stays where it is. */}
       {isOn(S, 'checkin') && <Route path="/checkin" element={<CheckIn />} />}
@@ -358,6 +376,7 @@ function Shell() {
       {isOn(S, 'coach') && <Route path="/coach/proposal" element={<Navigate to="/coach" replace />} />}
       {isOn(S, 'coach') && <Route path="/coach/setup" element={<CoachSetup />} />}
       <Route path="/admin" element={user?.admin ? <Admin /> : <Navigate to="/home" replace />} />
+      <Route path="/admin/social" element={user?.admin ? <AdminSocial /> : <Navigate to="/home" replace />} />
       <Route path="*" element={<Navigate to="/home" replace />} />
     </Routes>
   ))

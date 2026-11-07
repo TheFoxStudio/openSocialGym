@@ -1,9 +1,9 @@
-// openGym on a Zepp OS wrist: the app's dark look and lime accent (frontend/src/index.css), the
+// openGym on a Zepp OS wrist: the app's dark look and blue accent (frontend/src/index.css), the
 // Wear OS watch's tokens (frontend/android/wear/.../ui/Theme.kt), for small round AMOLED screens.
 //
 //   - Black is true black, not a tinted near-black: on AMOLED an off pixel costs no battery and
 //     makes the bezel disappear (frontend-design: tinted near-black is a default, not a choice).
-//   - One thing in lime per screen, the thing to press (frontend-design: spend boldness in one place;
+//   - One thing in blue per screen, the thing to press (frontend-design: spend boldness in one place;
 //     design-taste-frontend: one accent, flat colour, no gradients, no glows, no shadows at rest).
 //   - Numbers huge and bold, labels small and quiet, two sizes doing the work
 //     (design-taste-frontend: "one very large, one small"; apple-design: hierarchy from weight + size).
@@ -12,8 +12,8 @@
 //     touch-spacing), and everything kept inside the round safe area (safe-area-awareness).
 export const C = {
   bg: 0x000000,
-  lime: 0x30d158,
-  limePress: 0x1f8a3a,
+  lime: 0x13a5fd,
+  limePress: 0x0060df,
   onLime: 0x000000,
   tile: 0x1c1c1e,
   tileHi: 0x2c2c2e,

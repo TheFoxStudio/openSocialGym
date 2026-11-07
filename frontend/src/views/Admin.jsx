@@ -356,7 +356,8 @@ export default function Admin() {
         <div className="sub">{users ? users.length + ' users · ' + activeCount + ' active this week' : usersErr ? 'Could not load' : 'Loading…'}</div></div>
       <button className="iconbtn" onClick={() => { loadUsers(); loadInvites(); setTick(n => n + 1) }} aria-label="refresh">↻</button>
     </div>
-    <div className="adm-intro">
+      <Button onClick={() => nav('/admin/social')}>Social reports</Button>
+      <div className="adm-intro">
       Everything about running this instance: who uses it, how they get in, the AI Coach, and what has happened on it. Nothing here shows anyone's training data beyond counts.
     </div>
 

@@ -188,11 +188,16 @@ export function useNfcTagLinks(ready) {
   const readyRef = useRef(ready)
   const pending = useRef(null)
   readyRef.current = ready
-  useEffect(() => onTagLink(url => {
-    if (!parseTagUrl(url)) return
-    if (readyRef.current) handleTagLink(url)
-    else pending.current = url
-  }), [])
+  useEffect(() => {
+    const receive = url => {
+      if (!parseTagUrl(url)) return
+      if (readyRef.current) handleTagLink(url)
+      else pending.current = url
+    }
+    // The self-hosted web shell also serves /nfc links, including a cold browser start.
+    receive(globalThis.location?.href)
+    return onTagLink(receive)
+  }, [])
   useEffect(() => {
     if (!ready || !pending.current) return
     const url = pending.current

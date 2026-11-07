@@ -12,9 +12,9 @@ struct WorkoutLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: WorkoutActivityAttributes.self) { context in
             LiveLockView(attributes: context.attributes, state: context.state)
-                .activitySystemActionForegroundColor(Color(hex: context.attributes.accent) ?? .green)
+                .activitySystemActionForegroundColor(Color(hex: context.attributes.accent) ?? Color(red: 19.0/255, green: 165.0/255, blue: 253.0/255))
         } dynamicIsland: { context in
-            let accent = Color(hex: context.attributes.accent) ?? .green
+            let accent = Color(hex: context.attributes.accent) ?? Color(red: 19.0/255, green: 165.0/255, blue: 253.0/255)
             return DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
                     VStack(alignment: .leading, spacing: 2) {

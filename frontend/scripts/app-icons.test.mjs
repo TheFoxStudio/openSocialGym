@@ -59,6 +59,10 @@ describe('node scripts/app-icons.mjs --check', () => {
     const out = execFileSync(process.execPath, [join(ROOT, 'scripts/app-icons.mjs'), '--check'], { encoding: 'utf8' })
     expect(out).toContain('app icons up to date')
   }, 120_000)
+  it('keeps default platform, store, watch and splash assets in sync', () => {
+    const out = execFileSync(process.execPath, [join(ROOT, 'scripts/brand-assets.mjs'), '--check'], { encoding: 'utf8' })
+    expect(out).toContain('Brand assets up to date')
+  }, 120_000)
 })
 
 describe('the Halloween icon', () => {

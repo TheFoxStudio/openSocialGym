@@ -208,7 +208,7 @@ test:mcp:
   script:
     # log_workout's end-to-end test drives the real api/server.js: the api's dependencies too
     # (as test:api installs them), or that test fails here rather than skipping.
-    - (cd api && npm ci --cache ../mcp/.npm --prefer-offline --omit=optional)
+    - (cd api && npm ci --cache ../mcp/.npm --prefer-offline && npm uninstall --no-save --ignore-scripts @anthropic-ai/claude-agent-sdk)
     - cd mcp
     - npm ci --cache .npm --prefer-offline --ignore-scripts
     - npx vitest run
@@ -242,7 +242,9 @@ test:api:
       - api/.npm
   script:
     - cd api
-    - npm ci --cache .npm --prefer-offline --omit=optional
+    # Sharp needs optional platform binaries; remove only the optional AI SDK.
+    - npm ci --cache .npm --prefer-offline
+    - npm uninstall --no-save --ignore-scripts @anthropic-ai/claude-agent-sdk
     # The Coach tests run on node:test and drive the in-repo fixture provider plus a local mock
     # of the Chat Completions shape, so the whole job works without an AI account or the network.
     # Same suite `npm test` runs, plus the JUnit file and node's own coverage table.

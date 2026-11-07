@@ -142,6 +142,8 @@ servers:
     description: Your self-hosted instance
 
 tags:
+  - name: social
+    description: Opt-in member profiles and authenticated avatars (SOCIAL_ENABLED=1).
   - name: meta
     description: Health and public configuration
   - name: auth
@@ -187,6 +189,657 @@ security:
   - bearerAuth: []
 
 paths:
+  /api/social/feed:
+    get:
+      tags: [social]
+      summary: Following timeline including own shared workouts
+      description: >-
+        Only self and currently followed authors; current audience, block and account
+        policy is reapplied on every read. Descending creation time and ID. Opaque,
+        authenticated encrypted cursors expire after one hour and bind the viewer and
+        list. A publication sequence ceiling excludes later inserts during pagination.
+        At most 200 candidate rows are scanned per page; an empty page can have a cursor.
+      parameters:
+        - { in: query, name: limit, schema: { type: integer, minimum: 1, maximum: 50, default: 20 } }
+        - { in: query, name: cursor, schema: { type: string } }
+      responses:
+        '200':
+          description: Authorized posts and the signed-in viewer identity
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SocialTimelinePage' }
+        '400': { description: cursor-invalid or limit-invalid; refresh from the beginning }
+        '401': { description: Not signed in }
+        '404': { description: Social disabled }
+        '429': { description: social-rate-limit with retryAfter seconds }
+  /api/social/feed/check:
+    post:
+      tags: [social]
+      summary: Reauthorize up to fifty currently displayed timeline posts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids]
+              properties:
+                ids: { type: array, maxItems: 50, items: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Current post projections; inaccessible or unfollowed posts omitted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  viewerId: { type: string }
+                  posts: { type: array, items: { $ref: '#/components/schemas/SocialPost' } }
+        '400': { description: Invalid list }
+        '401': { description: Not signed in }
+        '404': { description: Social disabled }
+  /api/social/reports:
+    post:
+      tags: [social]
+      summary: Report an accessible profile or post for administrator review
+      description: Ten attempts per account per hour, plus the shared write budget. Self reports are rejected. Retries with the same request ID must have the same body.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [targetType, targetId, requestId, reason, details]
+              properties:
+                targetType: { type: string, enum: [profile, post] }
+                targetId: { type: string, maxLength: 64 }
+                requestId: { type: string, format: uuid }
+                reason: { type: string, enum: [spam, harassment, privacy, other] }
+                details: { type: string, maxLength: 1000 }
+      responses:
+        '200': { description: Report envelope with the submitted report; repeated reports for the same target lifetime return the original }
+        '400': { description: report-invalid or self-report }
+        '401': { description: Not signed in }
+        '404': { description: Content inaccessible or social disabled }
+        '409': { description: Request ID body mismatch }
+        '429': { description: Rate limit; retryAfter seconds }
+  /api/social/export:
+    get:
+      tags: [social]
+      summary: Export a page of the signed-in account's social data
+      description: >-
+        Owner is derived exclusively from the session. Sections contain own profile,
+        post snapshots, relationship IDs or submitted reports, never incoming reports.
+        Cursors are viewer and section bound. Image bytes are retrieved separately
+        through authenticated photo/avatar routes. Pages reflect current data, not an
+        atomic backup; use an offline server backup for disaster recovery.
+      parameters:
+        - { in: query, name: section, required: true, schema: { type: string, enum: [profile, posts, following, followers, blocks, reports] } }
+        - { in: query, name: limit, schema: { type: integer, minimum: 1, maximum: 50, default: 20 } }
+        - { in: query, name: cursor, schema: { type: string } }
+      responses:
+        '200':
+          description: Owner-scoped export page
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ownerId: { type: string }
+                  items: { type: array, items: {} }
+                  nextCursor: { type: [string, 'null'] }
+        '400': { description: Invalid section, limit or cursor }
+        '401': { description: Not signed in }
+        '404': { description: Social disabled }
+  /api/admin/social/reports:
+    get:
+      tags: [social]
+      summary: Administrator report queue
+      parameters:
+        - { in: query, name: limit, schema: { type: integer, minimum: 1, maximum: 50, default: 20 } }
+        - { in: query, name: cursor, schema: { type: string } }
+      responses:
+        '200': { description: viewerId, reports with reporterId, and nextCursor }
+        '401': { description: Not signed in }
+        '403': { description: Administrator role required }
+        '404': { description: Social disabled }
+  /api/admin/social/reports/{report}:
+    parameters:
+      - { in: path, name: report, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [social]
+      summary: Administrator review of reported social content
+      description: Returns viewerId, report and current target or null. Access is limited to reported social content; private workout data and source workout IDs are excluded.
+      responses:
+        '200': { description: Report review envelope }
+        '401': { description: Not signed in }
+        '403': { description: Administrator role required }
+        '404': { description: Missing report or social disabled }
+    put:
+      tags: [social]
+      summary: Dismiss a report or remove the reported social content
+      description: >-
+        Removal is irreversible. Profile removal cascades social posts and follows;
+        private workouts and login remain. A report from a previous profile lifetime
+        cannot remove a recreated profile. Closed reports are idempotent.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action: { type: string, enum: [dismiss, remove] }
+      responses:
+        '200': { description: Updated report review envelope with viewerId }
+        '400': { description: Invalid action }
+        '401': { description: Not signed in }
+        '403': { description: Administrator role required }
+        '404': { description: Missing report or social disabled }
+        '409': { description: Target profile was recreated; review current content separately }
+  /api/admin/social/reports/{report}/photo:
+    parameters:
+      - { in: path, name: report, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [social]
+      summary: Administrator image review scoped to reported content
+      responses:
+        '200': { description: WebP bytes, private no-store }
+        '401': { description: Not signed in }
+        '403': { description: Administrator role required }
+        '404': { description: Missing image, changed target lifetime or social disabled }
+  /api/social/posts:
+    get:
+      tags: [social]
+      summary: Find own post for a saved workout
+      parameters:
+        - { in: query, name: workoutId, required: true, schema: { type: string, maxLength: 160 } }
+      responses:
+        '200':
+          description: Own post envelope, or post null
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SocialPostEnvelope' }
+        '400': { description: post-invalid }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { description: social-disabled }
+        '429': { description: social-rate-limit }
+    post:
+      tags: [social]
+      summary: Explicitly publish a workout snapshot
+      description: >-
+        Requires an opted-in profile and its current socialEpoch as profileEpoch.
+        A requestId is stable across retries: identical retries return the same post;
+        a changed body with the same key returns 409. One active post per author/workout.
+        Deleted request keys return 410 instead of resurrecting a post. Only allowlisted
+        snapshot fields are stored. Source IDs belong to the authenticated author and
+        refer to client-provided saved sessions, which need not have completed private sync.
+        Does not read or publish the author's private training document.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SocialPostInput' }
+      responses:
+        '200':
+          description: Published post
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SocialPostEnvelope' }
+        '400': { description: post-invalid or photo-missing }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { description: social-disabled }
+        '409': { description: profile-required, profile-changed, post-exists or request-conflict }
+        '410': { description: post-deleted; a new explicit request is required to republish }
+        '429': { description: social-rate-limit }
+  /api/social/posts/{post}:
+    parameters:
+      - { in: path, name: post, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [social]
+      summary: Read an authorized workout post
+      description: Current followers or signed-in members according to audience, excluding blocks in either direction. Source workout IDs are returned only to the author.
+      responses:
+        '200':
+          description: Visible post
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SocialPostEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { description: post-missing or social-disabled; hidden and missing posts are indistinguishable }
+        '429': { description: social-rate-limit }
+    put:
+      tags: [social]
+      summary: Edit own workout post
+      description: >-
+        Requires the current revision, profileEpoch and a new stable requestId.
+        Can change caption, audience, photo or explicitly replace the preview.
+        Private workout edits never implicitly modify this snapshot. Replacing a photo
+        removes its unreferenced file. The author/workout reference cannot be changed.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SocialPostInput' }
+      responses:
+        '200':
+          description: Updated post
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SocialPostEnvelope' }
+        '400': { description: post-invalid or photo-missing }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { description: post-missing or social-disabled }
+        '409': { description: profile-required, profile-changed, post-conflict or request-conflict }
+        '410': { description: post-deleted }
+        '429': { description: social-rate-limit }
+    delete:
+      tags: [social]
+      summary: Delete own post and its photo
+      description: Keeps private training unchanged. Missing and unauthorized IDs both return 404. Publish retry tombstones remain until profile removal.
+      responses:
+        '200': { description: Deleted; ok true }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { description: post-missing or social-disabled }
+        '429': { description: social-rate-limit }
+  /api/social/posts/{post}/photo:
+    parameters:
+      - { in: path, name: post, required: true, schema: { type: string, format: uuid } }
+      - { in: query, name: asset, schema: { type: string, format: uuid }, description: Optional expected asset ID; returns 404 if the photo has changed }
+    get:
+      tags: [social]
+      summary: Read the photo of an authorized post
+      description: Uses the current post audience, follow/block and account policy on every request. Private no-store; no unauthenticated image URLs.
+      responses:
+        '200':
+          description: Sanitized WebP photo, at most 1 MiB
+          content:
+            image/webp:
+              schema: { type: string, format: binary }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { description: photo-missing or social-disabled }
+        '429': { description: social-rate-limit }
+  /api/social/profiles/{id}/posts:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string } }
+    get:
+      tags: [social]
+      summary: List a profile's visible workout posts
+      parameters:
+        - { $ref: '#/components/parameters/SocialCursor' }
+        - { $ref: '#/components/parameters/SocialLimit' }
+      description: Stable descending createdAt/id pagination, scoped to the viewer and author. Hidden posts are filtered under current policy, at most 200 candidates plus lookahead. Encrypted cursors expire after one hour and retain a publication ceiling.
+      responses:
+        '200':
+          description: Post page
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  viewerId: { type: string }
+                  posts: { type: array, items: { $ref: '#/components/schemas/SocialPost' } }
+                  nextCursor: { type: [string, 'null'] }
+        '400': { description: cursor-invalid or limit-invalid }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { description: profile-missing or social-disabled }
+        '429': { description: social-rate-limit }
+  /api/social/uploads/{asset}:
+    parameters:
+      - { in: path, name: asset, required: true, schema: { type: string, format: uuid } }
+    put:
+      tags: [social]
+      summary: Upload an owned still photo for a post
+      description: >-
+        Client-generated UUID, immutable content. Same ID/bytes are retryable, mismatches return 409.
+        Requires a profile. Input JPEG/PNG/WebP at most 2 MiB/4 million pixels, output WebP
+        at most 1920 pixels on the long edge and 1 MiB, preserving aspect ratio. Metadata is
+        removed by server decoding/re-encoding. One photo per post; 100 MiB per account and
+        at most 10 unlinked uploads. Pending uploads have no read endpoint. Unreferenced
+        uploads expire after 24 hours; GC runs on startup, uploads and deletion. Uploads share
+        avatar processing concurrency, timeout and six-attempt-per-minute budget.
+      requestBody:
+        required: true
+        content:
+          image/jpeg:
+            schema: { type: string, format: binary }
+          image/png:
+            schema: { type: string, format: binary }
+          image/webp:
+            schema: { type: string, format: binary }
+      responses:
+        '200':
+          description: Ready assetId
+          content:
+            application/json:
+              schema: { type: object, properties: { assetId: { type: string, format: uuid } } }
+        '400': { description: photo-invalid, avatar-invalid or avatar-upload }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { description: social-disabled }
+        '408': { description: avatar-timeout }
+        '409': { description: profile-required or photo-conflict }
+        '413': { description: avatar-too-large or photo-quota }
+        '415': { description: avatar-type }
+        '429': { description: social-rate-limit }
+        '503': { description: avatar-busy }
+        '507': { description: storage-full }
+    delete:
+      tags: [social]
+      summary: Discard own unreferenced upload
+      description: No effect on another member's asset or a linked post photo. Idempotent.
+      responses:
+        '200': { description: Removed if owned and unreferenced; ok true }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { description: social-disabled }
+        '429': { description: social-rate-limit }
+  /api/social/people:
+    get:
+      tags: [social]
+      summary: Find members by handle or display name prefix
+      description: >-
+        Only opted-in, enabled members are listed. Self and members blocked in either
+        direction are excluded. Optional leading @ is accepted; percent/underscore are literal.
+        Names are Unicode-normalized and case-folded. Social GET requests share a 120/minute
+        per-member budget. A page can be empty with a nextCursor when hidden candidates were scanned.
+      parameters:
+        - { in: query, name: q, schema: { type: string, maxLength: 60 } }
+        - { $ref: '#/components/parameters/SocialCursor' }
+        - { $ref: '#/components/parameters/SocialLimit' }
+      responses:
+        '200':
+          description: Visible members and nextCursor (null at the end)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SocialPeoplePage' }
+        '400': { description: query-invalid, cursor-invalid or limit-invalid }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { description: social-disabled }
+        '429': { description: social-rate-limit; Retry-After header indicates seconds }
+  /api/social/blocks:
+    get:
+      tags: [social]
+      summary: List own blocked members
+      description: >-
+        Management exception to the block policy, visible only to the blocker. Each item
+        contains id, handle and displayName only (no bio/avatar grant). Names can be null
+        after the target opts out. Block intent survives profile opt-out/recreation;
+        authentication-account deletion removes it.
+      parameters:
+        - { $ref: '#/components/parameters/SocialCursor' }
+        - { $ref: '#/components/parameters/SocialLimit' }
+      responses:
+        '200':
+          description: Own blocked-member list
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SocialBlockedPage' }
+        '400': { description: cursor-invalid or limit-invalid }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { description: social-disabled }
+        '429': { description: social-rate-limit }
+  /api/social/blocks/{id}:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string, pattern: '^[A-Za-z0-9_-]{1,64}$' } }
+    put:
+      tags: [social]
+      summary: Block a member
+      description: >-
+        Idempotently blocks a visible opted-in member and transactionally removes follows
+        in both directions. Blocks hide profiles, discovery/list entries and avatars in
+        both directions. Cannot block self. The target receives the same 404 as a missing
+        profile; incoming block lists are never disclosed.
+      responses:
+        '200': { description: Blocked; ok true }
+        '400': { description: self-block }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { description: profile-missing or social-disabled }
+        '429': { description: social-rate-limit }
+    delete:
+      tags: [social]
+      summary: Unblock a member
+      description: Idempotently removes only the caller's block. Does not restore follows or remove the other member's block. Works after target profile opt-out.
+      responses:
+        '200': { description: Unblocked; ok true }
+        '400': { description: self-block }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { description: social-disabled }
+        '429': { description: social-rate-limit }
+  /api/social/follows/{id}:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string, pattern: '^[A-Za-z0-9_-]{1,64}$' } }
+    put:
+      tags: [social]
+      summary: Follow a member
+      description: Idempotent. Requires own opted-in profile and a visible target profile. Cannot follow self or across a block in either direction.
+      responses:
+        '200':
+          description: Updated viewer relationship and visible counts
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SocialRelationshipEnvelope' }
+        '400': { description: self-follow }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { description: profile-missing or social-disabled }
+        '409': { description: profile-required }
+        '429': { description: social-rate-limit }
+    delete:
+      tags: [social]
+      summary: Unfollow a member
+      description: Idempotent. Requires own profile and visible target. Blocking already removes follows atomically.
+      responses:
+        '200':
+          description: Updated viewer relationship and visible counts
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SocialRelationshipEnvelope' }
+        '400': { description: self-follow }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { description: profile-missing or social-disabled }
+        '409': { description: profile-required }
+        '429': { description: social-rate-limit }
+  /api/social/profiles/{id}/followers:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string, pattern: '^[A-Za-z0-9_-]{1,64}$' } }
+    get:
+      tags: [social]
+      summary: List visible followers of a member
+      parameters:
+        - { $ref: '#/components/parameters/SocialCursor' }
+        - { $ref: '#/components/parameters/SocialLimit' }
+      responses:
+        '200':
+          description: Visible follower profiles
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SocialPeoplePage' }
+        '400': { description: cursor-invalid or limit-invalid }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { description: profile-missing or social-disabled }
+        '429': { description: social-rate-limit }
+  /api/social/profiles/{id}/following:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string, pattern: '^[A-Za-z0-9_-]{1,64}$' } }
+    get:
+      tags: [social]
+      summary: List visible members followed by a member
+      parameters:
+        - { $ref: '#/components/parameters/SocialCursor' }
+        - { $ref: '#/components/parameters/SocialLimit' }
+      responses:
+        '200':
+          description: Visible followed profiles
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SocialPeoplePage' }
+        '400': { description: cursor-invalid or limit-invalid }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { description: profile-missing or social-disabled }
+        '429': { description: social-rate-limit }
+  /api/social/me:
+    get:
+      tags: [social]
+      summary: Read own social profile
+      description: Returns profile null until the member opts in. All social routes return 404 when disabled and 401 without a session.
+      responses:
+        '200':
+          description: Profile envelope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SocialProfileEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Social disabled
+    put:
+      tags: [social]
+      summary: Create or update own social profile
+      description: >-
+        Full replacement of handle, displayName and bio. First creation requires accepted true.
+        Updates require the current revision. Account ID comes only from the session.
+        Handles are case-insensitive ASCII letters, digits and underscores, 3–30 characters;
+        reserved names are refused. 30 social writes per member per minute.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [handle, displayName, bio]
+              properties:
+                handle: { type: string, pattern: '^[A-Za-z0-9_]{3,30}$' }
+                displayName: { type: string, minLength: 1, maxLength: 60 }
+                bio: { type: string, maxLength: 300 }
+                accepted: { type: boolean }
+                revision: { type: integer, minimum: 1 }
+      responses:
+        '200':
+          description: Saved profile envelope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SocialProfileEnvelope'
+        '400':
+          description: Invalid fields or opt-in-required
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Social disabled
+        '409':
+          description: handle-taken or profile-conflict; reload before editing again
+        '429':
+          description: social-rate-limit
+    delete:
+      tags: [social]
+      summary: Remove own social profile and avatar
+      description: Idempotent opt-out. Keeps the authentication account and private workouts.
+      responses:
+        '200':
+          description: Removed
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Social disabled
+        '429':
+          description: social-rate-limit
+  /api/social/profiles/{id}:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string, pattern: '^[A-Za-z0-9_-]{1,64}$' } }
+    get:
+      tags: [social]
+      summary: Read a member social profile
+      description: Only opted-in profiles of existing enabled accounts are visible to signed-in members. Contains no authentication or private training fields.
+      responses:
+        '200':
+          description: Profile envelope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SocialProfileEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: profile-missing or social-disabled
+  /api/social/me/avatar:
+    put:
+      tags: [social]
+      summary: Replace own avatar
+      description: >-
+        Requires an existing social profile. JPEG, PNG or WebP stills, at most 2 MiB and
+        4 million decoded pixels. Re-encoded to 512 by 512 WebP with metadata removed.
+        At most 6 upload attempts per member per minute, two concurrent uploads and one
+        active decoder per process. Replacing an avatar invalidates its previous asset ID.
+      requestBody:
+        required: true
+        content:
+          image/jpeg:
+            schema: { type: string, format: binary }
+          image/png:
+            schema: { type: string, format: binary }
+          image/webp:
+            schema: { type: string, format: binary }
+      responses:
+        '200':
+          description: Updated profile envelope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SocialProfileEnvelope'
+        '400':
+          description: avatar-invalid or avatar-upload
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: social-disabled
+        '408':
+          description: avatar-timeout (15 seconds)
+        '409':
+          description: profile-required
+        '413':
+          description: avatar-too-large
+        '415':
+          description: avatar-type
+        '429':
+          description: social-rate-limit
+        '503':
+          description: avatar-busy; retry shortly
+    delete:
+      tags: [social]
+      summary: Remove own avatar
+      responses:
+        '200':
+          description: Updated profile envelope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SocialProfileEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: social-disabled
+        '409':
+          description: profile-required
+        '429':
+          description: social-rate-limit
+  /api/social/profiles/{id}/avatar/{asset}:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string, pattern: '^[A-Za-z0-9_-]{1,64}$' } }
+      - { in: path, name: asset, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [social]
+      summary: Read a member avatar
+      description: Authenticated reads only. Private no-store response; removed/replaced avatars cannot be retrieved through stale IDs.
+      responses:
+        '200':
+          description: Sanitized avatar
+          content:
+            image/webp:
+              schema: { type: string, format: binary }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: avatar-missing or social-disabled
   /api/health:
     get:
       tags: [meta]
@@ -3823,6 +4476,16 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
 
 components:
+  parameters:
+    SocialCursor:
+      in: query
+      name: cursor
+      description: Opaque continuation bound to the viewer, search term and list. Rechecked against current access rules.
+      schema: { type: string, maxLength: 1000 }
+    SocialLimit:
+      in: query
+      name: limit
+      schema: { type: integer, minimum: 1, maximum: 50, default: 20 }
   securitySchemes:
     cookieAuth:
       type: apiKey
@@ -3986,6 +4649,165 @@ components:
           example: { error: "that code is wrong, used or expired", code: "link-invalid" }
 
   schemas:
+    SocialPostInput:
+      type: object
+      required: [sourceWorkoutId, requestId, profileEpoch, snapshot, caption, audience]
+      properties:
+        sourceWorkoutId: { type: string, minLength: 1, maxLength: 160 }
+        requestId: { type: string, format: uuid }
+        profileEpoch: { type: string, format: uuid }
+        revision: { type: integer, minimum: 1 }
+        snapshot: { $ref: '#/components/schemas/SocialWorkoutSnapshot' }
+        caption: { type: string, maxLength: 2000 }
+        audience: { type: string, enum: [followers, members] }
+        assetId: { type: [string, 'null'] }
+    SocialPostEnvelope:
+      type: object
+      properties:
+        post:
+          oneOf:
+            - { type: 'null' }
+            - { $ref: '#/components/schemas/SocialPost' }
+    SocialPost:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        authorId: { type: string }
+        author:
+          type: object
+          properties:
+            id: { type: string }
+            handle: { type: string }
+            displayName: { type: string }
+            avatarId: { type: [string, 'null'] }
+        sourceWorkoutId: { type: string, description: Author-only internal workout reference }
+        snapshot: { $ref: '#/components/schemas/SocialWorkoutSnapshot' }
+        caption: { type: string }
+        audience: { type: string, enum: [followers, members] }
+        assetId: { type: [string, 'null'] }
+        createdAt: { type: integer }
+        updatedAt: { type: integer }
+        revision: { type: integer }
+    SocialTimelinePage:
+      type: object
+      properties:
+        viewerId: { type: string }
+        posts: { type: array, items: { $ref: '#/components/schemas/SocialPost' } }
+        nextCursor: { type: [string, 'null'], description: Opaque viewer-bound cursor valid for one hour }
+    SocialWorkoutSnapshot:
+      type: object
+      additionalProperties: false
+      required: [version, title, date, durationSec, exercises]
+      properties:
+        version: { type: integer, const: 1 }
+        title: { type: string, maxLength: 120 }
+        date: { type: string, format: date }
+        durationSec: { type: [number, 'null'], minimum: 0, maximum: 604800 }
+        exercises:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            type: object
+            additionalProperties: false
+            required: [name, unit, sets]
+            properties:
+              name: { type: string, minLength: 1, maxLength: 160 }
+              unit: { type: string, enum: [kg, lb] }
+              sets:
+                type: array
+                minItems: 1
+                maxItems: 100
+                items: { $ref: '#/components/schemas/SocialWorkoutSet' }
+    SocialWorkoutSet:
+      type: object
+      additionalProperties: false
+      required: [mode, type]
+      properties:
+        mode: { type: string, enum: [reps, time, cardio] }
+        type: { type: string, enum: [straight, dropset, restpause] }
+        side: { type: string, enum: [L, R] }
+        weight: { type: number, minimum: 0, maximum: 100000 }
+        reps: { type: number, minimum: 0, maximum: 100000 }
+        seconds: { type: number, minimum: 0, maximum: 604800 }
+        minutes: { type: number, minimum: 0, maximum: 10080 }
+        speedKmh: { type: number, minimum: 0, maximum: 1000 }
+        incline: { type: number, minimum: 0, maximum: 100 }
+        drops:
+          type: array
+          maxItems: 20
+          items:
+            type: object
+            required: [weight, reps]
+            properties:
+              weight: { type: number, minimum: 0, maximum: 100000 }
+              reps: { type: number, minimum: 0, maximum: 100000 }
+        clusters:
+          type: array
+          maxItems: 20
+          items:
+            type: object
+            required: [reps]
+            properties:
+              reps: { type: number, minimum: 0, maximum: 100000 }
+    SocialRelationship:
+      type: object
+      required: [isFollowing, isFollowedBy, followerCount, followingCount]
+      properties:
+        isFollowing: { type: boolean }
+        isFollowedBy: { type: boolean }
+        followerCount: { type: integer, minimum: 0 }
+        followingCount: { type: integer, minimum: 0 }
+    SocialRelationshipEnvelope:
+      type: object
+      required: [relationship]
+      properties:
+        relationship: { $ref: '#/components/schemas/SocialRelationship' }
+    SocialPeoplePage:
+      type: object
+      required: [people, nextCursor]
+      properties:
+        people:
+          type: array
+          items: { $ref: '#/components/schemas/SocialProfile' }
+        nextCursor: { type: [string, 'null'] }
+    SocialBlockedPage:
+      type: object
+      required: [people, nextCursor]
+      properties:
+        people:
+          type: array
+          items:
+            type: object
+            required: [id, handle, displayName]
+            properties:
+              id: { type: string }
+              handle: { type: [string, 'null'] }
+              displayName: { type: [string, 'null'] }
+        nextCursor: { type: [string, 'null'] }
+    SocialProfileEnvelope:
+      type: object
+      required: [profile]
+      properties:
+        relationship: { $ref: '#/components/schemas/SocialRelationship' }
+        profile:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/SocialProfile'
+    SocialProfile:
+      type: object
+      additionalProperties: false
+      required: [id, handle, displayName, bio, avatarId, createdAt, updatedAt, revision]
+      properties:
+        socialEpoch: { type: string, format: uuid, description: Profile opt-in lifetime, invalidates previously queued posts after profile recreation }
+        id: { type: string }
+        handle: { type: string }
+        displayName: { type: string }
+        bio: { type: string }
+        avatarId: { type: [string, 'null'] }
+        createdAt: { type: integer }
+        updatedAt: { type: integer }
+        revision: { type: integer }
     IntegrationEvent:
       type: string
       enum: [workout.finished, workout.pr, weighin.logged]

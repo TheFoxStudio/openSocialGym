@@ -41,6 +41,8 @@ import { atomicWrite as durableWrite } from './durable.js';
 import { ipv6Groups, guardedLookup, pushEndpointError, MAX_PUSH_ENDPOINT } from './net-guard.js';
 import { createIntegrations } from './integrations/index.js';
 import { integrationRoutes } from './integrations/routes.js';
+import { createSocialStore } from './social/store.js';
+import { socialRoutes, socialRouteKey } from './social/routes.js';
 import { excusedOn, nudgeFor, nudgeWindowOpen, toneOf } from './nudge.js';
 import { wrappedPushYear, wrappedSummary, wrappedPushOwed, wrappedPush } from './wrapped.js';
 
@@ -158,6 +160,10 @@ db.creds = db.creds || [];
 db.subs = db.subs || [];
 db.invites = db.invites || [];
 db.deviceLinks = db.deviceLinks || [];   // unused one-time device links, hashed (device-link.js)
+const SOCIAL_ON = /^(1|true|yes|on)$/i.test(process.env.SOCIAL_ENABLED || '');
+// Open an existing store even with the feature off so account deletion still cleans it.
+const social = SOCIAL_ON || fs.existsSync(path.join(DATA, 'social', 'social.sqlite'))
+  ? createSocialStore({ dataDir: DATA, accountExists: uid => db.users.some(u => u.id === uid), accountVisible: uid => db.users.some(u => u.id === uid && !u.disabled) }) : null;
 const isAdmin = user => !!user && (user.admin === true || ADMIN_UIDS.includes(user.id));
 // One owner per instance, any number of admins. Admins run the place day to day (users, invites,
 // the Coach); the owner is the one admin the others cannot act on: only the owner appoints or
@@ -1352,6 +1358,9 @@ function removeAccount(u) {
   // Their integrations: connections, sealed secrets and anything still waiting to be sent.
   try { integrations.removeUser(u.id); } catch (e) { console.error('integrations: could not remove', u.id, e.message); }
   saveDb();
+  // Account removal is durable first. Social reads reject a missing account even if cleanup
+  // fails; startup reconciliation retries after a crash between the two stores.
+  try { social?.remove(u.id, { accountDeleted: true }); } catch (e) { console.error('social: could not remove profile', u.id, e.message); }
 }
 
 const passwordRoutes = {
@@ -2105,6 +2114,7 @@ const routes = {
     // that has no Coach. The key's absence is that answer.
     json(res, 200, {
       invite_only: INVITE_ONLY, allow_guest: ALLOW_GUEST,
+      ...(SOCIAL_ON ? { social: { version: 1, enabled: true, profiles: true, graph: true, posts: true, feed: true, moderation: true, export: true, audiences: ['followers', 'members'], avatarMaxBytes: 2097152 } } : {}),
       // Only when on, so an instance without passwords answers exactly as it did before (#118).
       ...(PASSWORD_LOGIN ? { password_login: true } : {}),
       // Public: the sign-in screen is the first thing that reads it.
@@ -2979,6 +2989,7 @@ const routes = {
   // integrations/routes.js, handed the same helpers. With INTEGRATIONS unset they answer an empty
   // list (GET) or 404 "off", so the routes exist on every server and the app can tell.
   ...integrationRoutes({ json, readBody, readSession, hub: integrations, audit }),
+  ...socialRoutes({ store: SOCIAL_ON ? social : null, json, readBody, readSession, requireAdmin, audit }),
 
   /* ---------- photos & videos ---------- */
   // Absent, not refusing, when MEDIA_UPLOADS=0: a 404 is what a server from before the feature
@@ -3070,6 +3081,7 @@ const server = http.createServer(async (req, res) => {
   // above stays a plain lookup, and so csrfOk and the catch-all see one name for every file.
   const mm = /^\/api\/media\/([0-9a-f]{64})$/.exec(url.pathname);
   if (mm) { key = req.method + ' /api/media/{hash}'; req.mediaHash = mm[1]; }
+  key = socialRouteKey(req.method, url.pathname, req) || key;
   const handler = routes[key];
   if (!handler) return json(res, 404, { error: 'not found' });
   if (!csrfOk(req, key)) {

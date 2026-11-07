@@ -32,7 +32,7 @@ import './Tour.css'
 
 // What each stop says. Literal t() calls, so check-source-strings sees every one.
 const COPY = {
-  today: () => [t('Today at a glance'), t('Today’s session lives here. One tap and you’re lifting. On a rest day it says so, no guilt trip.')],
+  today: () => [t('Overview'), t('This week') + ' · ' + t('Workouts') + ' · ' + t('Training time')],
   'go-plan': () => [t('Off to Plan'), t('Your routines live behind this tab. Tap Plan.')],
   'plan-mode': () => [t('Week or rotation'), t('Train on fixed weekdays, or run your routines in a loop where the next one waits for you.')],
   'plan-views': () => [t('Your routines'), t('Schedule says when, Routines says what. Build your own or grab a starter plan.')],
@@ -86,7 +86,7 @@ const COPY = {
   'c-done': () => [t('That’s the lot'), t('Search finds your exercises like any other, and they go into routines and workouts the same way.')],
 
   'e-intro': () => [t('Edit your data'), t('We swapped in a practice copy with a pretend workout and weigh-in. Poke at anything, nothing here sticks.')],
-  'e-go-home': () => [t('Weigh-ins first'), t('They’re on Home. Tap it.')],
+  'e-go-home': () => [t('Stats'), t('All weigh-ins')],
   'e-weighins': () => [t('Every weigh-in'), t('Tap All weigh-ins.')],
   'e-weighin': () => [t('Fix a weigh-in'), t('The bin deletes one, and Undo pops up right after. Wrong number? Log that day again and the new one wins.')],
   'e-go-stats': () => [t('Now your workouts'), t('They live under Stats. Tap it.')],

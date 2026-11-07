@@ -1,3 +1,9 @@
+> **openSocialGym fork:** Social profiles, friends, shared workouts and a Following
+> timeline are implemented locally. Use this checkout's source-built images and
+> [deployment guide](docs/dev/SOCIAL_DEPLOYMENT.md); upstream app-store binaries and
+> registry images do not include the fork's social features. Native fork releases
+> and production hosting remain pending. Original openGym documentation follows.
+
 <div align="center">
 
 <p>

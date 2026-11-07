@@ -3,14 +3,14 @@
 // The app writes plain NDEF URI records itself (lib/nfc.js, NfcTagsPlugin on the phones, Web NFC
 // in Chrome on Android). Two kinds:
 //
-//   https://opengym.ch/nfc?do=start            start today's workout (or open the one running)
-//   https://opengym.ch/nfc?do=checkin&card=ID  show the gym membership code (views/CheckIn.jsx)
-//   https://opengym.ch/nfc?ex=ID               a machine: jump to that exercise in the workout
+//   https://gym.orktork.space/nfc?do=start            start today's workout (or open the one running)
+//   https://gym.orktork.space/nfc?do=checkin&card=ID  show the gym membership code (views/CheckIn.jsx)
+//   https://gym.orktork.space/nfc?ex=ID               a machine: jump to that exercise in the workout
 //
 // An https link and not only our own scheme, because that is what a phone reads with the app
 // closed: Android hands the tag to the app through the NDEF_DISCOVERED filter in the manifest,
 // and iOS background tag reading only routes web links (custom schemes are not supported there);
-// until opengym.ch is an associated domain of the iPhone app, the link opens opengym.ch/nfc in
+// until gym.orktork.space is an associated domain of the iPhone app, the link opens gym.orktork.space/nfc in
 // Safari, which hands it on as opengym://nfc?... A phone without openGym lands on that page too.
 // The short opengym:// forms (opengym://checkin, opengym://exercise/ID) are read as well.
 //
@@ -18,7 +18,7 @@
 import { effectiveRoutineIds, effectiveRoutines } from './history.js'
 import { canonicalExId } from './exercises.js'
 
-export const TAG_HOST = 'opengym.ch'
+export const TAG_HOST = 'gym.orktork.space'
 export const TAG_PATH = '/nfc'
 export const SCHEME = 'opengym'
 const ID_RE = /^[A-Za-z0-9_-]{1,64}$/
@@ -51,7 +51,7 @@ const fromQuery = q => {
 }
 
 /**
- * What a link read from a sticker (or handed over by opengym.ch/nfc) asks for, or null for
+ * What a link read from a sticker (or handed over by gym.orktork.space/nfc) asks for, or null for
  * anything that is not one of ours. Never throws.
  */
 export function parseTagUrl(raw) {

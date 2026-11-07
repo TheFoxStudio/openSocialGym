@@ -1,7 +1,7 @@
 # Two targets from one file.
 #
 #   default (built when no --target is given) — what every instance has always got. No AI
-#           runtime, no AI dependency: `npm ci --omit=optional` skips the Agent SDK and its
+#           runtime, no AI dependency: the base stage removes the Agent SDK and its
 #           platform runtime entirely, so an owner who never wanted the Coach carries none of it.
 #   coach                                     — the same image plus the Claude Agent SDK.
 #
@@ -18,12 +18,12 @@ ARG VERSION=dev
 ARG VCS_REF=dev
 ARG BUILD_DATE=unknown
 
-LABEL maintainer="Duarte Santos https://github.com/DuarteSantos8" \
-    org.opencontainers.image.title="opengym-api" \
+LABEL maintainer="TheFoxStudio https://github.com/TheFoxStudio" \
+    org.opencontainers.image.title="opensocialgym-api" \
     org.opencontainers.image.description="Backend for Self-hosted gym & body-weight tracker — plan routines, log workouts (supersets & cardio too), track your weight and progress, passkey login. Your data, your server." \
-    org.opencontainers.image.source="https://github.com/DuarteSantos8/openGym" \
-    org.opencontainers.image.url="https://opengym.ch" \
-    org.opencontainers.image.documentation="https://github.com/DuarteSantos8/openGym#readme" \
+    org.opencontainers.image.source="https://github.com/TheFoxStudio/openSocialGym" \
+    org.opencontainers.image.url="https://github.com/TheFoxStudio/openSocialGym" \
+    org.opencontainers.image.documentation="https://github.com/TheFoxStudio/openSocialGym#readme" \
     org.opencontainers.image.licenses="AGPL-3.0-or-later" \
     org.opencontainers.image.version=$VERSION \
     org.opencontainers.image.revision=$VCS_REF \
@@ -49,13 +49,19 @@ COPY package.json package-lock.json* ./
 # `npm ci` rather than `npm install`: the lockfile is the point of committing one, and the SDK's
 # per-platform runtime is resolved from it (musl on this base) rather than from whatever the
 # build host happened to be.
-RUN npm ci --omit=dev --omit=optional && npm cache clean --force
+# Sharp needs its optional platform binaries. Remove only the AI SDK afterwards;
+# --no-save preserves manifests so the coach target can reinstall from the lockfile.
+RUN npm ci --omit=dev \
+ && npm uninstall --no-save --ignore-scripts @anthropic-ai/claude-agent-sdk \
+ && npm cache clean --force
 
 # Every module server.js imports from the api root has to be named here: the image carries nothing
 # else, and one that is missing only shows at boot, as ERR_MODULE_NOT_FOUND.
 COPY server.js push-messages.js nudge.js nudge-copy.js wrapped.js wrapped-copy.js verify-error.js password.js rate-limit.js passkeys-store.js device-link.js watch-relay.js media.js queue.js sync-stamps.js durable.js admin-socket.js recover.js net-guard.js ./
 COPY coach ./coach
 COPY integrations ./integrations
+COPY social ./social
+COPY scripts/social-status.mjs ./scripts/social-status.mjs
 ENV NODE_ENV=production
 ENV PORT=3000
 EXPOSE 3000
@@ -71,7 +77,7 @@ HEALTHCHECK --interval=30s \
             CMD wget --spider -q "http://127.0.0.1:${PORT}/api/health" || exit 1
 
 # ---------------------------------------------------------------------------------------------
-# The opt-in target. Dropping --omit=optional is the whole difference: it pulls in
+# The opt-in target reinstalls the optional dependency from the preserved manifests: it pulls in
 # @anthropic-ai/claude-agent-sdk together with the one platform runtime this base needs
 # (linux-*-musl), both pinned by the lockfile.
 FROM base AS coach

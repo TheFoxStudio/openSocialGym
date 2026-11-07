@@ -641,7 +641,7 @@ struct LiveRest: View {
     var font: Font = .title2
 
     var body: some View {
-        let accent = Color(hex: attributes.accent) ?? .green
+        let accent = Color(hex: attributes.accent) ?? Color(red: 19.0/255, green: 165.0/255, blue: 253.0/255)
         // A hold (or its count-in) comes first: it is what is happening now.
         if let range = state.holdRange {
             Text(timerInterval: range, countsDown: true)
@@ -694,7 +694,7 @@ struct LiveDoneButton: View {
                 .lineLimit(1)
         }
         .buttonStyle(.borderedProminent)
-        .tint(Color(hex: attributes.accent) ?? .green)
+        .tint(Color(hex: attributes.accent) ?? Color(red: 19.0/255, green: 165.0/255, blue: 253.0/255))
         .accessibilityHint(Text([cur.exName, cur.setLine].filter { !$0.isEmpty }.joined(separator: ", ")))
     }
 }
@@ -707,7 +707,7 @@ struct LiveSecondaryButton: View {
     let state: WorkoutActivityAttributes.ContentState
 
     var body: some View {
-        let accent = Color(hex: attributes.accent) ?? .green
+        let accent = Color(hex: attributes.accent) ?? Color(red: 19.0/255, green: 165.0/255, blue: 253.0/255)
         if state.holding && state.auto == true {
             Button(intent: StopAutoIntent(wid: attributes.wid)) {
                 Image(systemName: "stop.fill").font(.subheadline.weight(.semibold))
@@ -740,7 +740,7 @@ struct LiveLockView: View {
     let state: WorkoutActivityAttributes.ContentState
 
     var body: some View {
-        let accent = Color(hex: attributes.accent) ?? .green
+        let accent = Color(hex: attributes.accent) ?? Color(red: 19.0/255, green: 165.0/255, blue: 253.0/255)
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top, spacing: 10) {
                 VStack(alignment: .leading, spacing: 2) {
@@ -782,7 +782,7 @@ struct LiveCompactTrailing: View {
             LiveRest(attributes: attributes, state: state, font: .caption).frame(width: 46)
         } else {
             Text("\(state.done)/\(state.total)").font(.caption.weight(.bold)).monospacedDigit()
-                .foregroundStyle(Color(hex: attributes.accent) ?? .green)
+                .foregroundStyle(Color(hex: attributes.accent) ?? Color(red: 19.0/255, green: 165.0/255, blue: 253.0/255))
         }
     }
 }
@@ -797,10 +797,10 @@ struct LiveMinimal: View {
             Text(timerInterval: range, countsDown: true, showsHours: false)
                 .font(.caption2.weight(.bold)).monospacedDigit()
                 .multilineTextAlignment(.center)
-                .foregroundStyle(Color(hex: attributes.accent) ?? .green)
+                .foregroundStyle(Color(hex: attributes.accent) ?? Color(red: 19.0/255, green: 165.0/255, blue: 253.0/255))
                 .frame(width: 34)
         } else {
-            Image(systemName: "dumbbell.fill").foregroundStyle(Color(hex: attributes.accent) ?? .green)
+            Image(systemName: "dumbbell.fill").foregroundStyle(Color(hex: attributes.accent) ?? Color(red: 19.0/255, green: 165.0/255, blue: 253.0/255))
         }
     }
 }

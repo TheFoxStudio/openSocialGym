@@ -117,7 +117,9 @@ jobs:
           fi
       - run: npm ci --ignore-scripts --no-audit --no-fund
         working-directory: frontend
-      - run: npm ci --omit=optional --no-audit --no-fund
+      - run: |
+          npm ci --no-audit --no-fund
+          npm uninstall --no-save --ignore-scripts @anthropic-ai/claude-agent-sdk
         working-directory: api
       - name: Frontend suite
         id: fe

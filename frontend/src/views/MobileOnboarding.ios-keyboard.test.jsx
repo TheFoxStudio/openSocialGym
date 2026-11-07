@@ -42,13 +42,22 @@ afterEach(() => {
 describe('the connect sheet and the iOS keyboard', () => {
   it('does not focus a field before the sheet has finished sliding up', () => {
     vi.useFakeTimers()
-    act(() => root.render(<ConnectSheet close={() => {}} />))
+    act(() => root.render(<ConnectSheet close={() => {}} initialUrl="" />))
     const [url] = sheet.querySelectorAll('input')
     act(() => { vi.advanceTimersByTime(250) })
     expect(document.activeElement).not.toBe(url)
     expect(SHEET_SETTLE_MS).toBeGreaterThan(340)   // index.css @keyframes sheetup is .34s
     act(() => { vi.advanceTimersByTime(SHEET_SETTLE_MS) })
     expect(document.activeElement).toBe(url)
+  })
+
+  it('prefills the deployment server and focuses the pairing code', () => {
+    vi.useFakeTimers()
+    act(() => root.render(<ConnectSheet close={() => {}} />))
+    const [url, code] = sheet.querySelectorAll('input')
+    expect(url.value).toBe('https://gym.orktork.space')
+    act(() => { vi.advanceTimersByTime(SHEET_SETTLE_MS) })
+    expect(document.activeElement).toBe(code)
   })
 
   it('pairing again focuses the code field, also only once the sheet has landed', () => {

@@ -150,7 +150,7 @@ public class OpenGymWidgetProvider extends AppWidgetProvider {
         }
     }
 
-    /** The app's accent (Settings → Look & Home), or its green when the snapshot has none. */
+    /** The app's accent (Settings → Look & Home), or its brand blue when the snapshot has none. */
     static int accentOf(JSONObject snap) {
         try {
             String hex = snap == null ? null : snap.optString("accent", null);
@@ -158,7 +158,7 @@ public class OpenGymWidgetProvider extends AppWidgetProvider {
         } catch (Exception e) {
             // the default below
         }
-        return 0xFF30D158;
+        return 0xFF13A5FD;
     }
 
     /** The weight goal's last weigh-ins as a thin line in the accent. */

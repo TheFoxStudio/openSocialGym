@@ -54,6 +54,12 @@ Design notes for specific features, kept next to the code they describe:
 
 | Note | Covers |
 |---|---|
+| [Social expansion](dev/SOCIAL_EXPANSION_PLAN.md) | Fork plan for profiles, avatars, following friends, workout posts, photos, and a custom server |
+| [Social profiles](dev/SOCIAL_PROFILES.md) | Enable the first milestone, architecture decisions, validation and backup |
+| [Friends and blocking](dev/SOCIAL_FRIENDS.md) | Local enabled instance, member discovery, following, blocking and schema-v2 migration |
+| [Workout publication](dev/SOCIAL_POSTS.md) | Post previews, captions, photos, audiences, durable drafts, retries and schema-v3 migration |
+| [Following timeline](dev/SOCIAL_TIMELINE.md) | Feed pagination, reporting, administrator takedown, social export and schema-v4 migration |
+| [Social deployment](dev/SOCIAL_DEPLOYMENT.md) | Source builds, offline backup/restore, storage diagnostics, feed probe and beta release gates |
 | [Set types](dev/SET_TYPES.md) | Drop sets and rest-pause: the set-row model and how totals are counted |
 | [Workout views](dev/LIST_VIEW.md) | The cards, list and compact layouts of the workout screen |
 | [Combine routines](dev/COMBINE_ROUTINES.md) | Spec for running more than one routine in a session |

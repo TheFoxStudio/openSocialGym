@@ -9,7 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createRoot } from 'react-dom/client'
 import { useStore } from '../store/useStore.js'
 import { startFlow } from '../sheets.jsx'
-import Home from './Home.jsx'
+import Home from './TrainingOverview.jsx'
 
 const nav = vi.fn()
 vi.mock('react-router-dom', () => ({ useNavigate: () => nav }))

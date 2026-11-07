@@ -212,8 +212,8 @@ describe('Card dismiss pass', () => {
   it('the cards and rows that hold a control use the stretched primary', () => {
     const src = f => readFileSync(resolve(SRC, f), 'utf8')
     expect(src('components/Recap.jsx')).toMatch(/className="card tap-host recap-card"[\s\S]*open=\{\{ onClick: \(\) => recapSheet\(r\)/)
-    expect(src('views/Home.jsx')).toMatch(/className="card tap-host streak-card"/)
-    expect(src('views/Home.jsx')).toMatch(/className="card tap-host checkin-card"/)
+    expect(src('views/TrainingOverview.jsx')).toMatch(/className="card tap-host streak-card"/)
+    expect(src('views/TrainingOverview.jsx')).toMatch(/className="card tap-host checkin-card"/)
     for (const f of ['views/Library.jsx', 'components/MuscleExplorer.jsx', 'sheets.jsx', 'views/RoutineEdit.jsx']) expect(src(f), f).toMatch(/className="grow item-open tap-main"/)
     expect(src('components/CardHead.jsx')).toMatch(/className="card-head-main tap-main"/)
     // with nothing nested, no control has to stop its click from reaching a card any more

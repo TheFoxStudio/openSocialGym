@@ -10,7 +10,7 @@ import { createRoot } from 'react-dom/client'
 import { useStore } from '../store/useStore.js'
 import { startFlow } from '../sheets.jsx'
 import { todayISO, isoOf, fmtDate } from '../lib/format.js'
-import Home from './Home.jsx'
+import Home from './TrainingOverview.jsx'
 import { setLang } from '../lib/i18n.js'
 
 vi.mock('react-router-dom', () => ({ useNavigate: () => () => {} }))

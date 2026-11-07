@@ -18,6 +18,7 @@ import { buildStarterPlan, starterPlanDays, starterPlanOptions } from './lib/sta
 import Media, { Thumb } from './components/Media.jsx'
 import CustomMediaField from './components/CustomMediaField.jsx'
 import WorkoutMediaSection, { workoutMediaCount } from './components/WorkoutMedia.jsx'
+import { socialWorkoutId } from './lib/social-snapshot.js'
 import { FormVideosSection } from './components/SetVideo.jsx'
 import { workoutSetVideos } from './lib/set-videos.js'
 import { mediaOf, normalizeMediaRef, cleanUrl, workoutMediaOf } from './lib/media-refs.js'
@@ -3223,7 +3224,31 @@ function WorkoutDetail({ w, close }) {
   }
   // Matched the way the edits above are, not by id: a workout from before ids has none, and
   // filtering on `x.id !== undefined` took every other one of them with it.
-  const deleteWorkout = () => confirmSheet({ title: t('Delete workout?'), message: t('This removes it from your history for good.') + mediaGoesToo(S().workouts.find(x => sameWorkout(x, w))), confirmText: t('Delete'), danger: true, onConfirm: () => { update(s => { s.workouts = s.workouts.filter(x => !sameWorkout(x, w)) }); close(); toast(t('Workout deleted')) } })
+  const deleteWorkout = () => {
+    const current = useStore.getState()
+    const identity = s => JSON.stringify([s.user?.id, s.sync?.server])
+    const before = identity(current)
+    const valid = () => identity(useStore.getState()) === before
+    const remove = () => {
+      if (!valid()) return
+      update(s => { s.workouts = s.workouts.filter(x => !sameWorkout(x, w)) }); close(); toast(t('Workout deleted'))
+      if (current.user) Promise.all([import('./lib/social-drafts.js'), import('./lib/social-api.js')]).then(([drafts, api]) => valid() ? drafts.deleteDraft(api.socialScope(current.user), socialWorkoutId(w)) : undefined).catch(() => {})
+    }
+    const confirm = withPost => confirmSheet({ title: t('Delete workout?'), message: t('This removes it from your history for good.') + mediaGoesToo(S().workouts.find(x => sameWorkout(x, w))), confirmText: t('Delete'), danger: true,
+      onConfirm: withPost ? async () => {
+        try {
+          const api = await import('./lib/social-api.js'); if (!valid()) return
+          const { post } = await api.readOwnPost(socialWorkoutId(w)); if (!valid()) return
+          if (post) await api.deletePost(post.id)
+          remove()
+        } catch { toast(t('Could not remove the shared post. Your workout is kept.')) }
+      } : remove })
+    if (current.config?.social?.posts) menuSheet({ title: t('Delete workout?'), sections: [{ items: [
+      { icon: 'trash', label: t('Delete workout only'), sub: t('Published posts are kept.'), onClick: () => confirm(false) },
+      { icon: 'trash', label: t('Delete workout and post'), danger: true, onClick: () => confirm(true) }
+    ] }] })
+    else confirm(false)
+  }
   // The once-in-a-while things, in one menu over this sheet: when it happened, keeping it as a
   // routine, getting it out of the app (on paper: the browser's print dialog or the phone's
   // print sheet; .fit for Garmin Connect), and Delete on its own at the end.
@@ -3238,6 +3263,7 @@ function WorkoutDetail({ w, close }) {
           { icon: 'plus', label: t('Save as routine'), onClick: saveAsRoutine },
         ] },
         { title: t('Share'), items: [
+          { icon: 'share', label: t('Share to feed'), onClick: () => closeThenNav(close, '/social/share/' + encodeURIComponent(socialWorkoutId(w))) },
           { icon: 'person', label: t('Share with a friend'), sub: t('As a routine they can do too'), onClick: shareWithFriend },
           // The share card is part of Motivation (Settings → Modules).
           isOn(st, 'motivation') && { icon: 'share', label: t('Share as image'), onClick: shareAsImage },
@@ -4035,6 +4061,7 @@ function FinishSummary({ w, prs, e1prs = [], additions = [], close }) {
         corner sit below it for whoever wants them, nobody has to scroll to leave (Discord). */}
     <div className="fin-actions">
       <Button variant="primary" onClick={() => closeThenNav(close, '/home')}>{t('Nice!')}</Button>
+      <Button variant="tinted" onClick={() => closeThenNav(close, '/social/share/' + encodeURIComponent(socialWorkoutId(w)))}>{t('Share to feed')}</Button>
       {/* The workout as a picture for a Story or a chat (components/ShareCard.jsx), the same
           card History's Share as image makes. */}
       {isOn(st, 'motivation') && <Button variant="tinted" icon="share" data-fin-share onClick={() => shareWorkoutSheet(S().workouts.find(x => x.id === w.id) || w)}>{t('Share')}</Button>}

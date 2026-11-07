@@ -4,7 +4,7 @@
 // code for a watch token (app-side/index.js). In the phone's language (setting/i18n).
 import { gettext } from 'i18n'
 
-const LIME = '#30D158'
+const LIME = '#13A5FD'
 const QUIET = '#6E6E73'
 
 AppSettingsPage({

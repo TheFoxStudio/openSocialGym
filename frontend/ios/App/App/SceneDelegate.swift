@@ -17,7 +17,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         if let url = connectionOptions.urlContexts.first?.url {
             _ = ApplicationDelegateProxy.shared.application(UIApplication.shared, open: url, options: [:])
         }
-        // A Universal Link (opengym.ch/nfc from a sticker, opengym.ch/r from a friend) that
+        // A Universal Link (gym.orktork.space/nfc from a sticker, gym.orktork.space/r from a friend) that
         // started the app comes as a user activity, not a URL context.
         if let activity = connectionOptions.userActivities.first(where: { $0.activityType == NSUserActivityTypeBrowsingWeb }) {
             _ = ApplicationDelegateProxy.shared.application(UIApplication.shared, continue: activity) { _ in }

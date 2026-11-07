@@ -30,7 +30,7 @@ public class RestTimerService extends Service {
     private String minusLabel = "\u2212 15s";
     private String plusLabel = "+ 15s";
     private String skipLabel = "Skip";
-    private int accent = 0xFF30D158;
+    private int accent = 0xFF13A5FD;
     private int ink = 0xFF000000;
     private PowerManager.WakeLock cpu;
     private PowerManager power;

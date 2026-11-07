@@ -10,13 +10,13 @@ import androidx.wear.compose.material3.ColorScheme
 import androidx.wear.compose.material3.MaterialTheme
 
 /*
- * openGym on the wrist: the app's dark look and lime accent (frontend/src/index.css), made for a
- * glance between sets. One thing in lime per screen, the thing to press; numbers big, tabular and
+ * openGym on the wrist: the app's dark look and blue accent (frontend/src/index.css), made for a
+ * glance between sets. One thing in blue per screen, the thing to press; numbers big, tabular and
  * bold; secondary words in a grey that still reads at 4.5:1 on black; targets 48 dp or more.
  */
 object Og {
-    val Lime = Color(0xFF30D158)
-    val LimeDim = Color(0xFF1F8A3A)
+    val Lime = Color(0xFF13A5FD)
+    val LimeDim = Color(0xFF0060DF)
     val OnLime = Color(0xFF000000)
     val Warm = Color(0xFFFF9F0A)
     val Red = Color(0xFFFF453A)

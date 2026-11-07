@@ -9,8 +9,8 @@ import CoreNFC
  * with Core NFC's own sheet ("Hold the top of your iPhone near the sticker").
  *
  * Reading needs nothing here: an iPhone XS or newer reads NDEF stickers in the background, and the
- * https://opengym.ch/nfc link on ours comes back to the page as opengym://nfc?... (through
- * opengym.ch/nfc, or straight away once opengym.ch is an associated domain), via @capacitor/app.
+ * https://gym.orktork.space/nfc link on ours comes back to the page as opengym://nfc?... (through
+ * gym.orktork.space/nfc, or straight away once gym.orktork.space is an associated domain), via @capacitor/app.
  *
  * Only NDEF stickers: no card emulation, nothing reads or copies a gym's access card.
  *

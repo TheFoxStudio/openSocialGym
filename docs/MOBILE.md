@@ -673,31 +673,28 @@ it after every web-code change before building natively.
 
 ## App icons & splash screens
 
-`frontend/resources/icon.svg` is the 1024×1024 source (the app's dumbbell glyph on the
-app background). Generate all platform assets from it on a machine with the tooling:
+The supplied openSocialGym artwork is retained in
+`frontend/resources/brand-icon-original.png`. The normalized 1024px opaque RGB
+`brand-icon.png` is the source for platform rendering. Do not replace it with the
+old upstream glyph. Regenerate from the repository root:
 
 ```sh
-cd frontend
-npx @capacitor/assets@3.0.5 generate --iconBackgroundColor '#0c0e12' --splashBackgroundColor '#0c0e12'
+node frontend/scripts/app-icons.mjs
+node frontend/scripts/brand-assets.mjs
 ```
 
-The generator is not a dependency of the app (it pulls in an old Capacitor CLI and sharp),
-so `npx` fetches it for that one run.
+Both scripts accept `--check` and use only Node built-ins. The first creates
+alternate-color launcher assets and Settings previews from the same symbol. The
+second creates primary Android/iOS icons, web/PWA icons, a padded maskable icon,
+favicons, watch/store images, monochrome Android notification artwork and splash
+screens. iOS icons are opaque; original transparency is composited on navy.
+The uploaded artwork is slightly taller than square and is fitted without cropping.
+Generated `resources/icon.png` and `icon.svg` also carry the new artwork for
+external tooling. Historical seasonal SVGs remain as references, not launcher art.
 
-(If the generator won't take the SVG directly, export it to `resources/icon.png` at
-1024×1024 first; any image tool can do it.)
-
-The alternate icons people can pick in Settings → Look & Home → App icon are not made by that
-generator. `node scripts/app-icons.mjs` draws them from the list in
-`src/lib/app-icon-variants.js` and the glyph in `resources/icon.svg`, with no dependencies: the
-SVG per icon in `resources/icons/`, an `AppIcon-<Name>` set (1024 px, opaque) per icon in the iOS
-asset catalog, the Android launcher, round and adaptive layers per density, and the previews in
-`public/app-icons/`. An icon with `art` (Halloween) is a hand-made SVG in `resources/icons/`
-instead, which the script renders; it may use only rect, circle, line, polyline, polygon and one
-two-stop radialGradient. `--check` says whether the committed files still match. A new icon also
-needs its activity-alias in `AndroidManifest.xml`, its name in `AppIcons.java` and
-`AppIconPlugin.swift`, and its set in `ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES`;
-`scripts/app-icons.test.mjs` fails until all of them agree.
+The default accent is Blue (`#13a5fd`, sampled from the checkmark). Dark-theme
+buttons use black text; light-theme blue uses a darker accessible shade with white
+text. Existing explicit user color preferences are preserved.
 
 ## Distributing your own build
 

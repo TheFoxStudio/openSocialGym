@@ -6,7 +6,7 @@ import React, { act } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createRoot } from 'react-dom/client'
 import { useStore } from '../store/useStore.js'
-import Home from './Home.jsx'
+import Home from './TrainingOverview.jsx'
 
 const mocks = vi.hoisted(() => ({ charts: [] }))
 vi.mock('react-router-dom', () => ({ useNavigate: () => vi.fn() }))
