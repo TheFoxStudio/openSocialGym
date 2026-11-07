@@ -1,14 +1,25 @@
 # Changelog
 
 Newest first. Each release is a `## vX.Y.Z (YYYY-MM-DD)` section, and the release notes on
-GitHub and GitLab are that section, word for word. New work goes under `## Unreleased` until the
+GitHub and GitLab are that section, word for word. New work goes under `## Unreleased
+
+Look & Home options now add enabled information above the social feed. All On Home
+switches default to off, while existing saved choices are preserved.
+
+
+Workout completion now puts compact totals beside the muscle graphic, with Share
+to feed as the primary action. Sharing has a shorter summary, audience buttons,
+an Add photo chooser and Cancel and save private.
+` until the
 tag. Write it for the people using the app: what changed for them, short, no em dashes.
 
 ## Unreleased
 
-Home now starts with weekly workout and training-time statistics, a link to detailed
-Stats, and the Following feed with more posts loaded as you scroll. The previous
-dashboard remains available through Stats → Training overview.
+Home now shows the social feed, with friends, profile and settings icons above it.
+Workout cards include metrics, five exercise rows, square photos with a swipeable
+exercise preview, likes and comments. Pull down at the top to refresh. Statistics
+remain in Stats. Hevy imports can prepare unpublished social drafts for review;
+Hevy social photos and reactions are not available through its public API.
 
 The fork uses the new blue workout/checkmark icon across web, phone and watch
 assets, launch screens, notifications and store artwork. The default accent is

@@ -4,6 +4,8 @@ import crypto from 'node:crypto';
 import { atomicWrite } from '../durable.js';
 import { SocialError } from './errors.js';
 import { postFields } from './snapshot.js';
+import { socialVolume } from './metrics.js';
+import { engagementSummary } from './engagement.js';
 
 const fail = (status, code, message) => { throw new SocialError(status, code, message); };
 const UUID = /^[a-f0-9-]{36}$/;
@@ -20,7 +22,8 @@ export function createPosts({ db, active, policy, transaction, dataDir, cursors,
     return a ? { id: a.account_id, handle: a.handle, displayName: a.display_name, avatarId: a.avatar_id } : null;
   };
   const project = (p, viewer = p.author_id) => ({ id: p.id, authorId: p.author_id, author: authorOf(p.author_id), ...(viewer === p.author_id ? { sourceWorkoutId: p.source_id } : {}), snapshot: JSON.parse(p.snapshot), caption: p.caption,
-    audience: p.audience, assetId: p.asset_id, createdAt: p.created_at, updatedAt: p.updated_at, revision: p.revision });
+    audience: p.audience, assetId: p.asset_id, createdAt: p.created_at, updatedAt: p.updated_at, revision: p.revision,
+    engagement:engagementSummary(db,viewer,p.id) });
   const owned = (author, id) => { const p = row(id); if (!p || p.author_id !== author) fail(404, 'post-missing', 'Post not found.'); return p; };
   const linked = asset => !!db.prepare('SELECT 1 FROM posts WHERE asset_id=?').get(asset);
   const file = id => path.join(dir, id + '.webp');
@@ -95,6 +98,17 @@ export function createPosts({ db, active, policy, transaction, dataDir, cursors,
     deletePost(author, id) {
       const p = owned(author, id); db.prepare('DELETE FROM posts WHERE id=?').run(id);
       if (p.asset_id) this.discardPostAsset(author, p.asset_id);
+    },
+    profileOverview(viewer, author) {
+      if (!profileExists(author) || !policy.canView(viewer, author)) fail(404,'profile-missing','Profile not found.');
+      let totalWorkouts=0,totalVolumeKg=0;const photos=[];
+      for(const p of db.prepare('SELECT * FROM posts WHERE author_id=? ORDER BY created_at DESC,id DESC').iterate(author)) {
+        if(!visible(viewer,p))continue;
+        totalWorkouts++;const volume=socialVolume(JSON.parse(p.snapshot),'kg');
+        totalVolumeKg+=volume.value*(volume.unit==='lb'?0.45359237:1);
+        if(p.asset_id&&photos.length<4)photos.push(project(p,viewer));
+      }
+      return {totalWorkouts,totalVolumeKg,photos};
     },
     profilePosts(viewer, author, options) { return page(viewer, author, options); },
     putPostAsset(author, id, bytes, digest) {

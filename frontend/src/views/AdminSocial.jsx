@@ -59,7 +59,7 @@ function Queue({ user }) {
     {detail && <section className="card"><h2>Reported {detail.report.targetType}</h2>
       <p>Status: {detail.report.status}</p><p>Reporter: {detail.report.reporterId}</p><p>{detail.report.reason}: {detail.report.details}</p>
       {detail.target ? <>{detail.target.snapshot ? <PostPreview snapshot={detail.target.snapshot} /> : <><h3>{detail.target.displayName}</h3><p>@{detail.target.handle}</p><p>{detail.target.bio}</p></>}
-        {detail.target.caption && <p>{detail.target.caption}</p>}{image && <img className="post-photo" src={image} alt="Reported content" />}</> : <p>This content is no longer available.</p>}
+        {detail.target.text && <p>{detail.target.text}</p>}{detail.target.caption && <p>{detail.target.caption}</p>}{image && <img className="post-photo" src={image} alt="Reported content" />}</> : <p>This content is no longer available.</p>}
       {detail.report.status === 'open' && <div className="social-actions"><Button disabled={busy} onClick={() => resolve('dismiss')}>Dismiss report</Button><Button disabled={busy} variant="danger" onClick={() => setConfirm(true)}>Remove content</Button></div>}
       {confirm && <div role="alert"><p>Remove this {detail.report.targetType} from the server? This cannot be undone.</p><Button disabled={busy} variant="danger" onClick={() => resolve('remove')}>Confirm removal</Button><Button disabled={busy} onClick={() => setConfirm(false)}>Cancel</Button></div>}
     </section>}

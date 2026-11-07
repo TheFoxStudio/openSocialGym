@@ -4,6 +4,9 @@ import { useStore } from '../store/useStore.js'
 import { t } from '../lib/i18n.js'
 import { socialAvailable, socialScope, readProfile, saveProfile, removeProfile, avatarBlob, prepareAvatar, uploadAvatar, removeAvatar, setFollow, setBlock } from '../lib/social-api.js'
 import { Button } from '../components/ui.jsx'
+import Posts from './Posts.jsx'
+import ProfilePhotos from '../components/ProfilePhotos.jsx'
+import { fmtVol,fmtNum } from '../lib/format.js'
 import SocialGate from '../components/SocialGate.jsx'
 import SocialReport from '../components/SocialReport.jsx'
 import SocialExport from '../components/SocialExport.jsx'
@@ -17,10 +20,10 @@ export default function Profile() {
   const { id } = useParams()
   const scope = socialScope(user)
   if (!socialAvailable(user, config)) return <SocialGate />
-  return <ProfileContent key={scope + ':' + server + ':' + (id || 'me')} id={id} own={!id || id === user.id} scope={scope} graph={config.social.graph === true} posts={config.social.posts === true} feed={config.social.feed === true} />
+  return <ProfileContent key={scope + ':' + server + ':' + (id || 'me')} id={id} own={!id || id === user.id} scope={scope} graph={config.social.graph === true} posts={config.social.posts === true} />
 }
 
-function ProfileContent({ id, own, scope, graph, posts, feed }) {
+function ProfileContent({ id, own, scope, graph, posts }) {
   const nav = useNavigate()
   const [profile, setProfile] = useState(undefined)
   const [loading, setLoading] = useState(true)
@@ -29,6 +32,8 @@ function ProfileContent({ id, own, scope, graph, posts, feed }) {
   const [editing, setEditing] = useState(false)
   const [confirmRemove, setConfirmRemove] = useState(false)
   const [confirmBlock, setConfirmBlock] = useState(false)
+  const [overview,setOverview]=useState(null)
+  const unit=useStore(s=>s.S?.unit||'kg')
   const [relationship, setRelationship] = useState(null)
   const [image, setImage] = useState(null)
   const [pending, setPending] = useState(null)
@@ -42,8 +47,8 @@ function ProfileContent({ id, own, scope, graph, posts, feed }) {
   }
   const load = async () => {
     setError(''); setLoading(true)
-    try { const out = await readProfile(id); if (valid()) { accept(out.profile); setRelationship(out.relationship || null) } }
-    catch { if (valid()) { setProfile(undefined); setRelationship(null); setImage(null); setError(t('Could not load this profile. Please try again.')) } }
+    try { const out = await readProfile(id); if (valid()) { accept(out.profile); setRelationship(out.relationship || null); setOverview(out.overview || null) } }
+    catch { if (valid()) { setProfile(undefined); setOverview(null); setRelationship(null); setImage(null); setError(t('Could not load this profile. Please try again.')) } }
     finally { if (valid()) setLoading(false) }
   }
   useEffect(() => { load() }, [])
@@ -101,11 +106,10 @@ function ProfileContent({ id, own, scope, graph, posts, feed }) {
   const editor = own && (editing || profile === null)
   return <div className="narrow social-profile" aria-busy={busy}>
     <div className="hdr"><h1>{t('Social profile')}</h1><Button size="sm" variant="ghost" onClick={() => nav('/home')}>{t('Back')}</Button></div>
-    {feed && <Button variant="tinted" onClick={() => nav('/social/feed')}>{t('Following timeline')}</Button>}
-    {own && <SocialExport />}
-    {graph && <div className="social-actions"><Button size="sm" variant="tinted" onClick={() => nav('/social/people')}>{t('Find friends')}</Button>{own && <Button size="sm" variant="ghost" onClick={() => nav('/social/blocks')}>{t('Blocked members')}</Button>}</div>}
+
     {error && <div className="card" role="alert"><p>{error}</p><Button disabled={busy} onClick={load}>{t('Reload')}</Button></div>}
-    {profile === undefined ? (loading && <div className="card" role="status">{t('Loading…')}</div>) : <div className="card">
+    {profile === undefined ? (loading && <div className="card" role="status">{t('Loading…')}</div>) : <div className="card profile-overview">
+      {own&&profile&&!editor&&<details className="profile-menu"><summary aria-label={t('Profile actions')}>⋯</summary><div><Button onClick={() => setEditing(true)}>{t('Edit profile')}</Button><SocialExport /><Button variant="ghost" onClick={() => setConfirmRemove(true)}>{t('Remove social profile')}</Button></div></details>}
       <div className="social-avatar">{image ? <img src={image} alt={t('Profile photo')} /> : <span aria-label={t('Profile photo')}>{(profile?.displayName || fields.displayName || '?').slice(0, 1).toUpperCase()}</span>}</div>
       {editor ? <form onSubmit={save}>
         <fieldset disabled={busy}>
@@ -131,25 +135,26 @@ function ProfileContent({ id, own, scope, graph, posts, feed }) {
       </form> : profile ? <>
         <h2>{profile.displayName}</h2><p className="muted">@{profile.handle}</p><p className="social-bio">{profile.bio}</p>
         <SocialReport type="profile" id={profile.id} ownerId={profile.id} />
-        {posts && <Button variant="tinted" onClick={() => nav('/social/profiles/' + profile.id + '/posts')}>{t('Workout posts')}</Button>}
-        {relationship && <div className="social-actions">
-          <Button size="sm" variant="tinted" onClick={() => nav('/social/profiles/' + profile.id + '/followers')}>{t('Followers')}: {relationship.followerCount}</Button>
-          <Button size="sm" variant="tinted" onClick={() => nav('/social/profiles/' + profile.id + '/following')}>{t('Following')}: {relationship.followingCount}</Button>
-        </div>}
+        <dl className="profile-statistics" aria-label={t('Statistics from shared workouts')}>
+          <div><dd>{overview?fmtNum(overview.totalWorkouts):'—'}</dd><dt>{t('Total workouts')}</dt></div>
+          <div><dd>{overview?fmtVol(Math.round(overview.totalVolumeKg*(unit==='lb'?1/0.45359237:1)),unit):'—'}</dd><dt>{t('Total volume')}</dt></div>
+          {graph&&<><div><dd>{fmtNum(relationship?.followerCount||0)}</dd><dt><button onClick={()=>nav('/social/profiles/'+profile.id+'/followers')}>{t('Followers')}</button></dt></div>
+          <div><dd>{fmtNum(relationship?.followingCount||0)}</dd><dt><button onClick={()=>nav('/social/profiles/'+profile.id+'/following')}>{t('Following')}</button></dt></div></>}
+        </dl>
         {!own && graph && <div className="social-actions">
-          <Button disabled={busy} variant="primary" onClick={() => run(async () => { const out = await setFollow(profile.id, !relationship?.isFollowing); if (valid()) setRelationship(out.relationship) })}>{relationship?.isFollowing ? t('Unfollow member') : t('Follow member')}</Button>
+          <Button disabled={busy} variant="primary" onClick={() => run(async () => { const out = await setFollow(profile.id, !relationship?.isFollowing); if (valid()) { setRelationship(out.relationship); if(posts)await load() } })}>{relationship?.isFollowing ? t('Unfollow member') : t('Follow member')}</Button>
           <Button disabled={busy} variant="ghost" onClick={() => setConfirmBlock(true)}>{t('Block member')}</Button>
         </div>}
         {confirmBlock && <div role="alert"><p>{t('Block this member? You will stop following each other and your profiles will be hidden from each other.')}</p>
           <Button disabled={busy} variant="danger" onClick={() => run(async () => { await setBlock(profile.id, true); if (valid()) { setImage(null); setProfile(undefined); setRelationship(null); nav('/social/people', { replace: true }) } })}>{t('Block member')}</Button>
           <Button disabled={busy} variant="ghost" onClick={() => setConfirmBlock(false)}>{t('Cancel')}</Button>
         </div>}
-        {own && <div className="social-actions"><Button onClick={() => setEditing(true)}>{t('Edit profile')}</Button><Button variant="ghost" onClick={() => setConfirmRemove(true)}>{t('Remove social profile')}</Button></div>}
         {confirmRemove && <div role="alert"><p>{t('Remove your social profile and avatar? Your account and private workouts will be kept.')}</p>
           <Button disabled={busy} variant="danger" onClick={() => run(async () => { await removeProfile(); await clearDrafts(scope).catch(() => {}); if (valid()) accept(null) })}>{t('Remove social profile')}</Button>
           <Button disabled={busy} variant="ghost" onClick={() => setConfirmRemove(false)}>{t('Cancel')}</Button>
         </div>}
       </> : null}
     </div>}
+    {profile&&!editor&&posts&&<><ProfilePhotos posts={overview?.photos||[]} scope={scope} /><Posts key={String(relationship?.isFollowing)} profileId={profile.id} embedded /></>}
   </div>
 }

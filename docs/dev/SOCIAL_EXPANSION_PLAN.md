@@ -31,7 +31,7 @@ Recommended first release:
 - Blocking, reporting, and an administrator takedown mechanism before inviting
   people outside a small trusted test group.
 
-Defer likes, comments, notifications, direct messages, video posts, algorithmic
+Likes and comments are implemented. Defer notifications, direct messages, video posts, algorithmic
 recommendations, contact-book discovery, federation between servers, and public
 unauthenticated links. These are separate extensions, not required for the
 requested profile/follow/share flow. Use Hevy as a behavior reference without
@@ -96,7 +96,7 @@ workout-model and total helpers so warmups, side sets, holds, and cardio are
 represented correctly. Snapshot custom exercise names so another user does not
 need access to the author's private exercise definitions.
 
-Exclude body weight, health/heart-rate data, private notes, gym/location, routine
+Exclude body weight, raw health/heart-rate data, private notes, gym/location, routine
 internals, progress photos, and form videos by default. Do not serialize `S` or
 the complete workout object into a post. Show the exact proposed contents before
 publication. Attaching a private workout photo to the training record does not

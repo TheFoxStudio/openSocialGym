@@ -14,7 +14,7 @@ try {
     const db = new DatabaseSync(file, { readOnly: true });
     try {
       const schema = db.prepare('PRAGMA user_version').get().user_version;
-      if (schema !== 4) throw Error('Expected social schema 4; run the compatible server migration first.');
+      if (schema < 4 || schema > 5) throw Error('Expected social schema 4 or 5; run the compatible server migration first.');
       const checks = db.prepare('PRAGMA quick_check').all();
       const count = table => db.prepare('SELECT count(*) n FROM ' + table).get().n;
       const assets = db.prepare('SELECT id FROM post_assets').all();

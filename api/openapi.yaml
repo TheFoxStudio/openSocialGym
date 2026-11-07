@@ -189,6 +189,74 @@ security:
   - bearerAuth: []
 
 paths:
+  /api/social/posts/{post}/like:
+    parameters:
+      - { in: path, name: post, required: true, schema: { type: string, format: uuid } }
+    put:
+      tags: [social]
+      summary: Like an accessible workout post
+      description: Idempotent. Requires an opted-in social profile and current post access.
+      responses:
+        '200': { description: viewerId and current engagement counts }
+        '401': { description: Not signed in }
+        '404': { description: Post inaccessible or social disabled }
+        '409': { description: Social profile required }
+        '429': { description: Write rate limit }
+    delete:
+      tags: [social]
+      summary: Remove your like from an accessible post
+      responses:
+        '200': { description: viewerId and current engagement counts }
+        '401': { description: Not signed in }
+        '404': { description: Post inaccessible or social disabled }
+  /api/social/posts/{post}/comments:
+    parameters:
+      - { in: path, name: post, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [social]
+      summary: Read visible comments on an accessible workout post
+      description: Ascending creation time and ID, current post access and blocks rechecked. At most 200 candidate rows per page. Removed comment text is never returned.
+      parameters:
+        - { in: query, name: cursor, schema: { type: string } }
+        - { in: query, name: limit, schema: { type: integer, minimum: 1, maximum: 50, default: 20 } }
+      responses:
+        '200': { description: viewerId, comments with public authors, nextCursor and engagement counts }
+        '400': { description: Invalid cursor or page size }
+        '401': { description: Not signed in }
+        '404': { description: Post inaccessible or social disabled }
+  /api/social/posts/{post}/comments/{comment}:
+    parameters:
+      - { in: path, name: post, required: true, schema: { type: string, format: uuid } }
+      - { in: path, name: comment, required: true, schema: { type: string, format: uuid } }
+    put:
+      tags: [social]
+      summary: Create a comment using a stable client-generated UUID
+      description: Same ID and text retries return the original comment. Changed text conflicts. Removed IDs are tombstones until their post or account is removed.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text: { type: string, minLength: 1, maxLength: 1000 }
+      responses:
+        '200': { description: viewerId, comment and engagement counts }
+        '400': { description: Invalid comment }
+        '401': { description: Not signed in }
+        '404': { description: Post inaccessible or social disabled }
+        '409': { description: Social profile required or comment ID conflict }
+        '410': { description: Comment was removed }
+        '429': { description: Write rate limit }
+    delete:
+      tags: [social]
+      summary: Delete a comment you wrote or a comment on your own post
+      description: Erases text and retains an ID tombstone to prevent response-loss retries from resurrecting removed content.
+      responses:
+        '200': { description: viewerId and engagement counts }
+        '401': { description: Not signed in }
+        '404': { description: Post inaccessible, comment not owned or social disabled }
   /api/social/feed:
     get:
       tags: [social]
@@ -251,7 +319,7 @@ paths:
               type: object
               required: [targetType, targetId, requestId, reason, details]
               properties:
-                targetType: { type: string, enum: [profile, post] }
+                targetType: { type: string, enum: [profile, post, comment] }
                 targetId: { type: string, maxLength: 64 }
                 requestId: { type: string, format: uuid }
                 reason: { type: string, enum: [spam, harassment, privacy, other] }
@@ -274,7 +342,7 @@ paths:
         through authenticated photo/avatar routes. Pages reflect current data, not an
         atomic backup; use an offline server backup for disaster recovery.
       parameters:
-        - { in: query, name: section, required: true, schema: { type: string, enum: [profile, posts, following, followers, blocks, reports] } }
+        - { in: query, name: section, required: true, schema: { type: string, enum: [profile, posts, following, followers, blocks, reports, likes, comments] } }
         - { in: query, name: limit, schema: { type: integer, minimum: 1, maximum: 50, default: 20 } }
         - { in: query, name: cursor, schema: { type: string } }
       responses:
@@ -4673,6 +4741,12 @@ components:
       properties:
         id: { type: string, format: uuid }
         authorId: { type: string }
+        engagement:
+          type: object
+          properties:
+            likes: { type: integer }
+            liked: { type: boolean }
+            comments: { type: integer }
         author:
           type: object
           properties:
@@ -4700,6 +4774,10 @@ components:
       required: [version, title, date, durationSec, exercises]
       properties:
         version: { type: integer, const: 1 }
+        totalVolume: { type: number, minimum: 0, maximum: 1000000000000 }
+        volumeUnit: { type: string, enum: [kg, lb] }
+        records: { type: integer, minimum: 0, maximum: 10000 }
+        averageHeartRate: { type: number, minimum: 1, maximum: 300, description: Only included with explicit sharing consent }
         title: { type: string, maxLength: 120 }
         date: { type: string, format: date }
         durationSec: { type: [number, 'null'], minimum: 0, maximum: 604800 }
@@ -4713,6 +4791,8 @@ components:
             required: [name, unit, sets]
             properties:
               name: { type: string, minLength: 1, maxLength: 160 }
+              catalogId: { type: string, maxLength: 64 }
+              setCount: { type: integer, minimum: 1, maximum: 100 }
               unit: { type: string, enum: [kg, lb] }
               sets:
                 type: array
@@ -4789,6 +4869,16 @@ components:
       type: object
       required: [profile]
       properties:
+        overview:
+          type: object
+          description: Totals and up to four recent photos from published workouts currently visible to the viewer; excludes private training.
+          properties:
+            totalWorkouts: { type: integer, minimum: 0 }
+            totalVolumeKg: { type: number, minimum: 0 }
+            photos:
+              type: array
+              maxItems: 4
+              items: { $ref: '#/components/schemas/SocialPost' }
         relationship: { $ref: '#/components/schemas/SocialRelationship' }
         profile:
           oneOf:

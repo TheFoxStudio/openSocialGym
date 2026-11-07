@@ -250,7 +250,8 @@ export function parseHevyWorkouts(workouts, templates, { unit = 'kg', customEx =
     const key = w.id != null ? 'id|' + w.id : start.d + '|' + start.t + '|' + title
     let day = byDate.get(key)
     if (!day) {
-      day = { d: start.d, ex: new Map(), name: title, start: start.t, end: end?.t ?? null }
+      day = { d: start.d, ex: new Map(), name: title, start: start.t, end: end?.t ?? null,
+        description:typeof w.description==='string'?w.description.slice(0,2000).replace(/[\x00-\x08\x0b-\x1f\x7f]/g,''):'' }
       byDate.set(key, day)
     } else if (!day.name && title) day.name = title
     // Past midnight the end's clock restarts; count it from the start day's midnight instead.
@@ -313,6 +314,7 @@ export function parseHevyWorkouts(workouts, templates, { unit = 'kg', customEx =
       // From what it is (importId), so the same import on two devices merges into one.
       id: importId('iw', JSON.stringify(['Hevy', d, startMs, day.name || '', entries.map(e => [e.id, e.sets])])), d, start: startMs, end: endMs > startMs ? endMs : startMs,
       routineId: null, name: day.name || 'Imported', entries, prs: [],
+      ...(day.description?{hevyDescription:day.description}:{}),
     }
     // Work sets only, the number `workoutVolume` gives a workout finished in the app; it is stored for good.
     workout.vol = entries.reduce((a, e) => a + e.sets.reduce((b, s) => b + (isWarmupRow(s) ? 0 : (s.w || 0) * (s.r || 0)), 0), 0)

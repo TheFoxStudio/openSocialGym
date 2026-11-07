@@ -107,7 +107,7 @@ test('schema-three upgrade and an offline directory restore preserve posts, grap
     for (let i = 0; i < 3; i++) store.publishPost('two', { profileEpoch: epoch, requestId: crypto.randomUUID(), sourceWorkoutId: 'w' + i, snapshot, caption: '', audience: 'followers', assetId: null });
     store.close(); store = null;
     const db = new DatabaseSync(path.join(dir, 'social', 'social.sqlite'));
-    db.exec('DROP TABLE reports; DROP TABLE social_meta; DROP INDEX posts_sequence; ALTER TABLE posts DROP COLUMN publication_seq; PRAGMA user_version=3;'); db.close();
+    db.exec('DROP TABLE post_likes; DROP TABLE post_comments; DROP TABLE reports; DROP TABLE social_meta; DROP INDEX posts_sequence; ALTER TABLE posts DROP COLUMN publication_seq; PRAGMA user_version=3;'); db.close();
     store = open(dir); assert.equal(store.get('two').socialEpoch, epoch);
     const page = store.feed('one', { limit: 1 }); assert.equal(page.posts.length, 1); assert.ok(page.nextCursor);
     store.close(); store = null;

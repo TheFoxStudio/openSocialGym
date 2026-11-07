@@ -56,3 +56,8 @@ it('ignores old-account results and gates servers without graph support', async 
   expect(host.textContent).not.toContain('Private stale name')
   expect(host.textContent).toContain('Connect to a server')
 })
+
+it('offers friend discovery and blocked members in your Following list',async()=>{
+ await render('following');await click('Find friends');expect(h.nav).toHaveBeenCalledWith('/social/people');
+ await click('Blocked members');expect(h.nav).toHaveBeenCalledWith('/social/blocks');
+});

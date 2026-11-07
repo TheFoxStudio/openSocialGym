@@ -2114,7 +2114,7 @@ const routes = {
     // that has no Coach. The key's absence is that answer.
     json(res, 200, {
       invite_only: INVITE_ONLY, allow_guest: ALLOW_GUEST,
-      ...(SOCIAL_ON ? { social: { version: 1, enabled: true, profiles: true, graph: true, posts: true, feed: true, moderation: true, export: true, audiences: ['followers', 'members'], avatarMaxBytes: 2097152 } } : {}),
+      ...(SOCIAL_ON ? { social: { version: 1, enabled: true, profiles: true, graph: true, posts: true, feed: true, interactions: true, moderation: true, export: true, audiences: ['followers', 'members'], avatarMaxBytes: 2097152 } } : {}),
       // Only when on, so an instance without passwords answers exactly as it did before (#118).
       ...(PASSWORD_LOGIN ? { password_login: true } : {}),
       // Public: the sign-in screen is the first thing that reads it.

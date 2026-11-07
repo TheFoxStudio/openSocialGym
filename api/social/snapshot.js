@@ -33,9 +33,16 @@ export function snapshotFields(s) {
   const exercises = s.exercises.map(e => {
     if (!object(e) || !Array.isArray(e.sets) || !e.sets.length || e.sets.length > 100) invalid();
     count += e.sets.length; if (count > 1000) invalid();
-    return { name: text(e.name, 160), unit: enumOf(e.unit, ['kg', 'lb']), sets: e.sets.map(setOf) };
+    const out={ name: text(e.name, 160), unit: enumOf(e.unit, ['kg', 'lb']), sets: e.sets.map(setOf) };
+    if(e.setCount!=null){out.setCount=number(e.setCount,100);if(!Number.isInteger(out.setCount)||out.setCount<1||out.setCount>out.sets.length)invalid();}
+    if(e.catalogId!=null){const id=text(e.catalogId,64);if(!/^[A-Za-z0-9_-]+$/.test(id))invalid();out.catalogId=id;}
+    return out;
   });
-  return { version: 1, title: text(s.title, 120, true), date, durationSec: s.durationSec == null ? null : number(s.durationSec, 604800), exercises };
+  const out={ version: 1, title: text(s.title, 120, true), date, durationSec: s.durationSec == null ? null : number(s.durationSec, 604800), exercises };
+  if(s.totalVolume!=null){out.totalVolume=number(s.totalVolume,1e12);out.volumeUnit=enumOf(s.volumeUnit,['kg','lb']);}
+  if(s.records!=null){out.records=number(s.records,10000);if(!Number.isInteger(out.records))invalid();}
+  if(s.averageHeartRate!=null){out.averageHeartRate=number(s.averageHeartRate,300);if(out.averageHeartRate<1)invalid();}
+  return out;
 }
 export function postFields(body) {
   if (!object(body)) invalid();

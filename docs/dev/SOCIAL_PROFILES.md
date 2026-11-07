@@ -30,7 +30,7 @@ explanation. Pairing remains the existing **Server & sync** flow.
 - Existing authentication account IDs identify profiles; the social handle is
   separate from the login name. Handles are lowercase ASCII letters/digits/
   underscores, 3–30 characters, unique case-insensitively. System names are reserved.
-- `DATA_DIR/social/social.sqlite` now stores schema version 4 (profiles, graph, posts and reports). The implementation uses
+- `DATA_DIR/social/social.sqlite` now stores schema version 5 (profiles, graph, posts, reports, likes and comments). The implementation uses
   built-in `node:sqlite`, verified against Node 22.23.4 and the local Node 24.22.1.
   Node 22 marks this API experimental. Pin the runtime, run the compatibility
   tests on upgrades, and fail on an unknown future schema instead of downgrading.

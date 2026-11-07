@@ -15,7 +15,7 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true
    waiting for its push does not flash it. The store is a stand-in: its `sync` is what each test
    sets; ServerSync.jsx (the words and the actions) is the real one. */
 const mocks = vi.hoisted(() => {
-  const state = { MOBILE: false, DEMO: false, webauthn: true, user: null, guest: false, onboarding: false, sync: null, S: {}, sheets: [], navs: [] }
+  const state = { MOBILE: false, DEMO: false, webauthn: true, user: null, guest: false, onboarding: false, sync: null, S: {connStatus:true}, sheets: [], navs: [] }
   state.toast = vi.fn()
   state.syncNow = vi.fn(async () => state.sync)
   state.passkeyLogin = vi.fn(async () => ({ id: 'u1', name: 'andi' }))
@@ -58,7 +58,7 @@ const network = on => {
 let host, root
 beforeEach(() => {
   network(true)
-  Object.assign(mocks, { MOBILE: false, DEMO: false, webauthn: true, user: { id: 'u1', name: 'andi' }, guest: false, onboarding: false, sync: sync('ok'), S: {} })
+  Object.assign(mocks, { MOBILE: false, DEMO: false, webauthn: true, user: { id: 'u1', name: 'andi' }, guest: false, onboarding: false, sync: sync('ok'), S: {connStatus:true} })
   mocks.sheets.length = 0
   mocks.navs.length = 0
   mocks.toast.mockClear(); mocks.syncNow.mockClear(); mocks.passkeyLogin.mockClear(); mocks.update.mockClear()
@@ -287,13 +287,13 @@ describe('hiding the no-server line', () => {
   })
 
   it('a profile without the key still shows the line', () => {
-    Object.assign(mocks, { user: null, guest: true, sync: sync('local'), S: {} })
+    Object.assign(mocks, { user: null, guest: true, sync: sync('local'), S: {connStatus:true} })
     render()
     expect(bar()).not.toBeNull()
   })
 
   it('hidden, a problem with a server still shows, and has no × of its own', () => {
-    mocks.S = { connLocal: false }
+    mocks.S = { connLocal: false,connStatus:true }
     for (const [st, extra] of [['offline', { pending: true }], ['error', { lastError: { status: 502 } }], ['auth', {}], ['held', {}]]) {
       mocks.sync = sync(st, extra)
       render()
@@ -384,12 +384,12 @@ describe('with the connection status switched off', () => {
     }
   })
 
-  it('an older profile without the setting still shows it', () => {
+  it('an older profile without the setting starts with the banner off', () => {
     mocks.S = {}
     mocks.sync = sync('offline', { pending: true })
     both()
-    expect(bar()).not.toBeNull()
-    expect(trouble()).toBe(false)
+    expect(bar()).toBeNull()
+    expect(trouble()).toBe(true)
   })
 
   it('a dot for offline, an error, a refusal and an open sign-in question', () => {

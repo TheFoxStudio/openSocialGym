@@ -1,6 +1,5 @@
 // @vitest-environment happy-dom
-// The finish summary's Share (v1.4.5): right next to the way out, which stays right under the
-// numbers, and it opens the same picture sheet as History's "Share as image".
+// The completion summary saves privately or opens the social composer.
 import React, { act } from 'react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { createRoot } from 'react-dom/client'
@@ -55,27 +54,22 @@ describe('finish summary: Share', () => {
     await settle()
     const row = host.querySelector('.fin-actions')
     expect(row).toBeTruthy()
-    const [done, social, share] = row.querySelectorAll('button')
-    expect(done.textContent).toBe('Nice!')
+    const [social, done] = row.querySelectorAll('button')
+    expect(done.textContent).toBe('Save')
     expect(social.textContent).toBe('Share to feed')
-    expect(share.textContent).toBe('Share')
+    expect(row.querySelectorAll('button')).toHaveLength(2)
+    expect(social.className).toContain('primary')
+    expect(host.querySelector('[data-fin-share]')).toBeNull()
     // Nothing but the numbers and the records list between the title and the way out.
     const tiles = host.querySelector('.tiles.fin')
     expect(tiles.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(host.querySelector('.bodymap, [data-keep-in-routine]')?.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy()
+    expect(host.querySelector('.finish-overview .bodymap')?.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
-  it('opens the picture sheet for the saved workout: story or square, dark or light', async () => {
-    act(() => finishWorkoutNow())
-    renderTopSheet()
-    await settle()
-    const before = useUI.getState().sheets.length
-    act(() => host.querySelector('[data-fin-share]').click())
-    expect(useUI.getState().sheets.length).toBe(before + 1)
-    renderTopSheet()
-    await settle()
-    expect(host.querySelector('h3').textContent).toBe('Share workout')
-    const labels = [...host.querySelectorAll('.share-opts button')].map(b => b.textContent)
-    expect(labels).toEqual(['Story 9:16', 'Square 1:1', 'Dark', 'Light'])
+  it('Save leaves the finished workout private and returns home',async()=>{
+    const destinations=[];setNav(to=>destinations.push(to));act(()=>finishWorkoutNow());renderTopSheet();await settle();
+    act(()=>[...host.querySelectorAll('.fin-actions button')].find(b=>b.textContent==='Save').click());
+    expect(destinations).toEqual(['/home']);expect(useStore.getState().S.workouts.some(w=>w.id==='fin')).toBe(true);
+    expect(host.querySelector('.finish-overview .finish-muscles .bodymap')).toBeTruthy();
   })
 })

@@ -15,6 +15,8 @@ import { memo } from 'react'
 //   · geometry snapped to .5 so it lands on pixel edges at 24px
 
 const P = {
+  message: <path d="M20 11.5a7.5 7.5 0 0 1-7.8 7.4c-1.1 0-2.2-.2-3.2-.6L4 20l1.5-4.5A7.2 7.2 0 0 1 4 11.1a7.5 7.5 0 0 1 8-7.3 7.5 7.5 0 0 1 8 7.7Z" />,
+  send: <><path d="m3.5 4 17 8-17 8 3-8-3-8ZM6.5 12h14" /></>,
   /* ---- navigation ---- */
   house: <path d="M3.5 10.7 12 3.8l8.5 6.9M5.9 9.4V19a1.4 1.4 0 0 0 1.4 1.4h9.4A1.4 1.4 0 0 0 18.1 19V9.4" />,
   calendar: <><rect x="3.4" y="5.2" width="17.2" height="15.4" rx="3.2" /><path d="M8.2 3.4v3.4M15.8 3.4v3.4M3.4 10.2h17.2" /></>,

@@ -4,6 +4,8 @@ import { createRoot } from 'react-dom/client'
 import { beforeEach, afterEach, describe, it, expect, vi } from 'vitest'
 import Profile from './Profile.jsx'
 
+vi.mock('./Posts.jsx',()=>({default:({profileId,embedded})=><section data-testid="profile-posts">{profileId}:{String(embedded)}</section>}))
+vi.mock('../components/ProfilePhotos.jsx',()=>({default:({posts})=><div data-testid="profile-photos">{posts.length}</div>}))
 globalThis.IS_REACT_ACT_ENVIRONMENT = true
 const h = vi.hoisted(() => ({
   state: {}, id: undefined, nav: vi.fn(), read: vi.fn(), save: vi.fn(), remove: vi.fn(), prepare: vi.fn(), upload: vi.fn(), avatar: vi.fn(), removeAvatar: vi.fn(), follow: vi.fn(), block: vi.fn()
@@ -52,7 +54,7 @@ describe('social profile', () => {
       .mockResolvedValueOnce({ relationship: { isFollowing: false, followerCount: 0, followingCount: 0 } })
     h.block.mockResolvedValue({ ok: true })
     await render(); await click('Follow member'); expect(h.follow).toHaveBeenCalledWith('two', true)
-    expect(host.textContent).toContain('Followers: 1')
+    expect(host.querySelector('.profile-statistics').textContent).toContain('1Followers')
     await click('Unfollow member'); expect(h.follow).toHaveBeenLastCalledWith('two', false)
     await click('Block member'); expect(h.block).not.toHaveBeenCalled()
     await act(async () => [...host.querySelectorAll('button')].filter(b => b.textContent === 'Block member').at(-1).click())
@@ -108,3 +110,14 @@ describe('social profile', () => {
     expect(h.remove).toHaveBeenCalledOnce(); expect(host.querySelector('[name=accepted]')).not.toBeNull()
   })
 })
+
+it('keeps account actions in a closed menu and places photos before the embedded timeline',async()=>{
+ h.state.config.social.posts=true;
+ h.read.mockResolvedValue({profile:profile(),relationship:{followingCount:3,followerCount:8},overview:{totalWorkouts:12,totalVolumeKg:1500,photos:[{}]}});
+ await render();expect(host.querySelector('.profile-menu').open).toBe(false);
+ expect(host.querySelector('.profile-statistics').textContent).toContain('12Total workouts');
+ expect(host.textContent).not.toContain('Following timeline');
+ expect(host.textContent).not.toContain('Find friends');
+ await click('Following');expect(h.nav).toHaveBeenCalledWith('/social/profiles/one/following');
+ expect(host.querySelector('[data-testid=profile-photos]').compareDocumentPosition(host.querySelector('[data-testid=profile-posts]'))&Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+});

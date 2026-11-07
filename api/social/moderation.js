@@ -10,11 +10,15 @@ export function createModeration({ db, active, policy, transaction, posts, curso
   const target = r => {
     const owner = profile(r.target_owner);
     if (!active(r.target_owner) || owner?.social_epoch !== r.target_epoch) return null;
+    if(r.target_type==='comment') {
+      const comment=db.prepare('SELECT id,post_id postId,text,created_at createdAt FROM post_comments WHERE id=? AND user_id=?').get(r.target_id,r.target_owner);
+      return comment?.text?{...comment,author:profileData(owner)}:null;
+    }
     return r.target_type === 'post' ? posts.reviewPost(r.target_id) : profileData(owner);
   };
   return {
     report(viewer, body) {
-      if (!body || !['profile', 'post'].includes(body.targetType) || typeof body.targetId !== 'string' || body.targetId.length > 64 || !UUID.test(body.requestId || '') ||
+      if (!body || !['profile', 'post','comment'].includes(body.targetType) || typeof body.targetId !== 'string' || body.targetId.length > 64 || !UUID.test(body.requestId || '') ||
         !['spam', 'harassment', 'privacy', 'other'].includes(body.reason) || typeof body.details !== 'string' || body.details.length > 1000 || /[\x00-\x08\x0b-\x1f\x7f]/.test(body.details)) fail(400, 'report-invalid', 'Invalid report.');
       const digest = crypto.createHash('sha256').update(JSON.stringify([body.targetType, body.targetId, body.reason, body.details.trim()])).digest('hex');
       const prior = db.prepare('SELECT * FROM reports WHERE reporter_id=? AND request_id=?').get(viewer, body.requestId);
@@ -22,7 +26,13 @@ export function createModeration({ db, active, policy, transaction, posts, curso
         if (prior.request_digest !== digest) fail(409, 'request-conflict', 'This report request changed.');
         return { report: REPORT(prior) };
       }
-      const owner = body.targetType === 'post' ? posts.getPost(viewer, body.targetId).authorId : body.targetId;
+      let owner=body.targetId;
+      if(body.targetType==='post')owner=posts.getPost(viewer,body.targetId).authorId;
+      if(body.targetType==='comment'){
+        const comment=db.prepare('SELECT * FROM post_comments WHERE id=?').get(body.targetId);
+        if(!comment?.text)fail(404,'target-missing','Content not found.');
+        posts.getPost(viewer,comment.post_id);owner=comment.user_id;
+      }
       const p = profile(owner);
       if (!p || !policy.canView(viewer, owner)) fail(404, 'target-missing', 'Content not found.');
       if (owner === viewer) fail(400, 'self-report', 'You cannot report your own content.');
@@ -45,6 +55,7 @@ export function createModeration({ db, active, policy, transaction, posts, curso
     reviewReport(id) { const r = get(id), data = target(r); return { report: { ...REPORT(r), reporterId: r.reporter_id }, target: data }; },
     reportPhoto(id) {
       const r = get(id), data = target(r); if (!data) return null;
+      if(r.target_type==='comment')return null;
       return r.target_type === 'post' ? posts.reviewPhoto(r.target_id) : db.prepare('SELECT avatar FROM profiles WHERE account_id=?').get(r.target_owner)?.avatar;
     },
     resolveReport(id, action) {
@@ -56,7 +67,8 @@ export function createModeration({ db, active, policy, transaction, posts, curso
         if (action === 'remove') {
           const current = profile(r.target_owner);
           if (current && current.social_epoch !== r.target_epoch) fail(409, 'target-changed', 'This profile was recreated. Review the current content separately.');
-          if (r.target_type === 'post') db.prepare('DELETE FROM posts WHERE id=? AND author_id=?').run(r.target_id, r.target_owner);
+          if(r.target_type==='comment')db.prepare("UPDATE post_comments SET text='' WHERE id=? AND user_id=?").run(r.target_id,r.target_owner);
+          else if (r.target_type === 'post') db.prepare('DELETE FROM posts WHERE id=? AND author_id=?').run(r.target_id, r.target_owner);
           else {
             db.prepare('DELETE FROM posts WHERE author_id=?').run(r.target_owner);
             db.prepare('DELETE FROM profiles WHERE account_id=?').run(r.target_owner);
@@ -76,6 +88,8 @@ export function createModeration({ db, active, policy, transaction, posts, curso
       }
       if (section === 'posts') { const p = posts.exportPosts(viewer, { cursor, limit }); return { ownerId: viewer, items: p.posts, nextCursor: p.nextCursor }; }
       const queries = {
+        likes: ['SELECT post_id id,created_at createdAt FROM post_likes WHERE user_id=? AND post_id>? ORDER BY post_id LIMIT ?', 'id'],
+        comments: ["SELECT id,post_id postId,text,created_at createdAt FROM post_comments WHERE user_id=? AND text<>'' AND id>? ORDER BY id LIMIT ?", 'id'],
         following: ['SELECT followed_id id,created_at createdAt FROM follows WHERE follower_id=? AND followed_id>? ORDER BY followed_id LIMIT ?', 'id'],
         followers: ['SELECT follower_id id,created_at createdAt FROM follows WHERE followed_id=? AND follower_id>? ORDER BY follower_id LIMIT ?', 'id'],
         blocks: ['SELECT blocked_id id,created_at createdAt FROM blocks WHERE blocker_id=? AND blocked_id>? ORDER BY blocked_id LIMIT ?', 'id'],

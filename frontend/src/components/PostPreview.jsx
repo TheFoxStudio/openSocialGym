@@ -14,6 +14,9 @@ export default function PostPreview({ snapshot }) {
   return <section className="post-preview" aria-label={t('Workout preview')}>
     <h2>{snapshot.title || t('Workout')}</h2>
     <p className="small dim">{snapshot.date}{snapshot.durationSec != null ? ' · ' + n(Math.round(snapshot.durationSec / 60)) + ' min' : ''}</p>
+    {snapshot.totalVolume!=null&&<p className="small dim">{t('Total volume')}: {n(snapshot.totalVolume)} {snapshot.volumeUnit}</p>}
+    {snapshot.records>0&&<p className="small dim">{t('Records')}: {n(snapshot.records)}</p>}
+    {snapshot.averageHeartRate&&<p className="small dim">{t('Avg. heart rate')}: {t('{0} bpm',n(snapshot.averageHeartRate))}</p>}
     {snapshot.exercises.map((e, i) => <div key={i}><h3>{e.name}</h3><ol>{e.sets.map((s, j) => <li key={j}>{postSetText(s, e.unit)}</li>)}</ol></div>)}
   </section>
 }

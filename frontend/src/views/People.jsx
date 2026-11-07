@@ -51,6 +51,7 @@ function Directory({ kind, id, scope }) {
   const title = kind === 'people' ? t('Find friends') : kind === 'blocks' ? t('Blocked members') : kind === 'followers' ? t('Followers') : t('Following')
   return <div className="narrow social-profile" aria-busy={busy}>
     <div className="hdr"><h1>{title}</h1><Button size="sm" variant="ghost" onClick={() => nav(id ? '/social/profiles/' + id : '/social')}>{t('Back')}</Button></div>
+    {kind==='following'&&<div className="social-actions"><Button variant="tinted" onClick={()=>nav('/social/people')}>{t('Find friends')}</Button>{id===useStore.getState().user?.id&&<Button variant="ghost" onClick={()=>nav('/social/blocks')}>{t('Blocked members')}</Button>}</div>}
     {kind === 'people' && <form className="card" onSubmit={ev => { ev.preventDefault(); if (query === draft.trim()) load(); else setQuery(draft.trim()) }}>
       <label>{t('Find friends')}<input value={draft} onChange={ev => setDraft(ev.target.value)} maxLength={60} type="search" /></label>
       <Button type="submit" variant="primary" disabled={busy}>{t('Search')}</Button>

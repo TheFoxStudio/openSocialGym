@@ -35,9 +35,18 @@ export function socialRoutes({ store, json, readBody, readSession, requireAdmin,
   };
   const profileEnvelope = (viewer, id) => {
     const profile = store.get(id, viewer);
-    return profile ? { profile, relationship: store.relationship(viewer, id) } : { profile: null };
+    return profile ? { profile, relationship: store.relationship(viewer, id), overview: store.profileOverview(viewer, id) } : { profile: null };
   };
   return {
+    'PUT /api/social/posts/{post}/like': guard(async(req,res,user)=>json(res,200,store.likePost(user.id,req.socialPost,true))),
+    'DELETE /api/social/posts/{post}/like': guard(async(req,res,user)=>json(res,200,store.likePost(user.id,req.socialPost,false))),
+    'GET /api/social/posts/{post}/comments': guard(async(req,res,user)=>json(res,200,store.comments(user.id,req.socialPost,options(req)))),
+    'PUT /api/social/posts/{post}/comments/{comment}': guard(async(req,res,user)=>{
+      const body=await readBody(req);
+      if(readSession(req)?.id!==user.id)throw new SocialError(401,'not-signed-in','Not signed in.');
+      json(res,200,store.putComment(user.id,req.socialPost,req.socialComment,body));
+    }),
+    'DELETE /api/social/posts/{post}/comments/{comment}': guard(async(req,res,user)=>json(res,200,store.deleteComment(user.id,req.socialPost,req.socialComment))),
     'GET /api/social/feed': guard(async (req, res, user) => json(res, 200, store.feed(user.id, options(req)))),
     'POST /api/social/feed/check': guard(async (req, res, user) => {
       const body = await readBody(req);
@@ -168,6 +177,8 @@ export function socialRoutes({ store, json, readBody, readSession, requireAdmin,
 }
 
 export function socialRouteKey(method, pathname, req) {
+  const interaction=/^\/api\/social\/posts\/([a-f0-9-]{36})\/(like|comments)(?:\/([a-f0-9-]{36}))?$/.exec(pathname);
+  if(interaction){req.socialPost=interaction[1];req.socialComment=interaction[3];return method+' /api/social/posts/{post}/'+interaction[2]+(interaction[3]?'/{comment}':'');}
   const report = /^\/api\/admin\/social\/reports\/([a-f0-9-]{36})(\/photo)?$/.exec(pathname);
   if (report) { req.socialReport = report[1]; return method + ' /api/admin/social/reports/{report}' + (report[2] || ''); }
   const post = /^\/api\/social\/posts\/([a-f0-9-]{36})(\/photo)?$/.exec(pathname);

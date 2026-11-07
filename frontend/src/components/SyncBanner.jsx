@@ -51,7 +51,7 @@ function useConnection() {
 // "Show connection status" (#369, #330): on by default, and an older profile without the key
 // reads as on. Off hides the banner — for a phone kept local on purpose it is a line that never
 // goes — but a sync that is stuck still has to be noticed somewhere.
-export const showsConnection = S => S?.connStatus !== false
+export const showsConnection = S => S?.connStatus === true
 
 // The quiet "no server" line (#454): a phone kept local or a guest has chosen that, and a line
 // saying so on every screen, for good, is a nag. Its × sets this off; offline, an error or a

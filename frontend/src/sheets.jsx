@@ -19,6 +19,8 @@ import Media, { Thumb } from './components/Media.jsx'
 import CustomMediaField from './components/CustomMediaField.jsx'
 import WorkoutMediaSection, { workoutMediaCount } from './components/WorkoutMedia.jsx'
 import { socialWorkoutId } from './lib/social-snapshot.js'
+import { prepareHevySocialDrafts } from './lib/hevy-social.js'
+import { socialScope,socialPostsAvailable,readProfile } from './lib/social-api.js'
 import { FormVideosSection } from './components/SetVideo.jsx'
 import { workoutSetVideos } from './lib/set-videos.js'
 import { mediaOf, normalizeMediaRef, cleanUrl, workoutMediaOf } from './lib/media-refs.js'
@@ -670,6 +672,8 @@ function hevyProgressLabel(p) {
 
 function HevyImportSheet({ close }) {
   const st = useStore(s => s.S)
+  const user=useStore(s=>s.user),config=useStore(s=>s.config)
+  const [wantSocial,setWantSocial]=useState(false)
   const [apiKey, setApiKey] = useState('')
   const [busy, setBusy] = useState(false)
   const [progress, setProgress] = useState(null)
@@ -713,8 +717,10 @@ function HevyImportSheet({ close }) {
     }
   }
 
-  const doImport = () => {
-    if (!payload) return
+  const doImport = async () => {
+    if (!payload||busy) return
+    const scope=socialScope(useStore.getState().user)
+    setBusy(true)
     const parts = []
     let addedW = 0, addedR = 0, addedB = 0
     update(s => {
@@ -734,8 +740,17 @@ function HevyImportSheet({ close }) {
         parts.push(tn('{0} weigh-in imported', '{0} weigh-ins imported', res.added))
       }
     })
-    close()
-    if (!addedW && !addedR && !addedB) toast(t('Nothing new to import'))
+    if(wantWorkouts&&wantSocial&&socialPostsAvailable(user,config)){
+      try{
+        const profile=await readProfile().catch(()=>({profile:null}))
+        const result=await prepareHevySocialDrafts(payload.workouts.workouts,useStore.getState().S,{scope,profileEpoch:profile.profile?.socialEpoch,currentScope:()=>socialScope(useStore.getState().user)})
+        if(socialScope(useStore.getState().user)!==scope)return
+        parts.push(t('{0} social drafts prepared',result.created))
+        if(result.failed)parts.push(t('Some social drafts could not be saved.'))
+      }catch{if(socialScope(useStore.getState().user)!==scope)return;parts.push(t('Some social drafts could not be saved.'))}
+    }
+    setBusy(false);close()
+    if (!addedW && !addedR && !addedB&&!(wantWorkouts&&wantSocial&&socialPostsAvailable(user,config))) toast(t('Nothing new to import'))
     else toast(parts.join(' · '))
   }
 
@@ -779,7 +794,7 @@ function HevyImportSheet({ close }) {
   const freshB = b.bodyweight.length - haveB
   // Routines are always added as new copies (same as plan import).
   const freshR = r.routines.length
-  const canImport = (wantWorkouts && freshW > 0) || (wantRoutines && freshR > 0) || (wantBody && freshB > 0)
+  const canImport = (wantWorkouts && (freshW > 0||(wantSocial&&w.workouts.length>0))) || (wantRoutines && freshR > 0) || (wantBody && freshB > 0)
   const unmatched = [...new Set([
     ...(wantWorkouts ? w.unmatchedNames : []),
     ...(wantRoutines ? r.unmatchedNames : []),
@@ -807,6 +822,7 @@ function HevyImportSheet({ close }) {
       </div>
       <Switch checked={wantWorkouts} onChange={setWantWorkouts} />
     </div>}
+    {w.workouts.length>0&&socialPostsAvailable(user,config)&&<div className="row between" style={{padding:'10px 2px',gap:12}}><div><div>{t('Prepare social drafts')}</div><p className="small dim">{t('Hevy provides workout descriptions, not social photos, likes or comments. Review drafts before publishing.')}</p></div><Switch checked={wantSocial&&wantWorkouts} disabled={busy||!wantWorkouts} onChange={setWantSocial} /></div>}
     {r.routines.length > 0 && <div className="row between" style={{ padding: '10px 2px', borderTop: '1px solid var(--sep)', gap: 12 }}>
       <div>
         <div className="tt" style={{ fontSize: 'var(--fs-subhead)' }}>{t('Import routines')}</div>
@@ -837,8 +853,8 @@ function HevyImportSheet({ close }) {
       </div>
     </>}
 
-    <Button variant="primary" onClick={doImport} disabled={!canImport}>
-      {canImport ? t('Import') : t('Nothing new to import')}
+    <Button variant="primary" onClick={doImport} disabled={!canImport||busy}>
+      {busy?t('Saving…'):canImport ? t('Import') : t('Nothing new to import')}
     </Button>
     <div style={{ height: 8 }} />
     <Button variant="ghost" className="dim" onClick={() => { setPayload(null); wipeKey() }}>{t('Back')}</Button>
@@ -4047,35 +4063,24 @@ function FinishSummary({ w, prs, e1prs = [], additions = [], close }) {
     <div className="fin-x"><button type="button" className="iconbtn" aria-label={t('Close')} onClick={() => closeThenNav(close, '/home')}><Icon name="xmark" /></button></div>
     <div style={{ fontSize: 44, display: 'flex', justifyContent: 'center', color: 'var(--acc-ink)', position: 'relative' }}><Icon name="trophy" /><SeasonDeco spot="finish" workout /></div>
     <h3 style={{ margin: '8px 0' }}>{t('Workout complete!')}</h3>
-    <div className="tiles fin" style={{ textAlign: 'start' }}>
+    <div className="finish-overview"><div className="tiles fin" style={{ textAlign: 'start' }}>
       <div className="tile"><div className="l">{t('Duration')}</div><div className="v v-sm">{fmtDur(w.end - w.start)}</div></div>
       <div className="tile"><div className="l">{t('Volume')}</div><div className="v v-sm">{fmtVol(sessionVolume(w, st), st.unit)}</div></div>
       <div className="tile wide"><div className="l">{t('Sets')}</div><div className="v v-sm">{setsWorkCount(setsDone(w), workSetsDone(w))}</div></div>
       <div className="tile narrow"><div className="l">{t('PRs')}</div><div className="v v-sm">{prs.length || '–'}</div></div>
-    </div>
+    </div><div className="finish-muscles"><h4 className="sec">{t('What you just trained')}</h4><BodyMap load={loadOfWorkouts([w])} body={st.body} /></div></div>
     {(prs.length > 0 || e1prs.length > 0) && <div style={{ textAlign: 'start', marginBottom: 12 }}>
       {prs.map(id => <div key={id} className="small accent row" style={{ gap: 6, alignItems: 'flex-start' }}><Icon name="trophy" style={{ fontSize: 'var(--fs-footnote)', marginTop: 2, flex: 'none' }} /><span>{t('New PR:')} <span className={exerciseNameClass(EXIDX[id])}>{EXIDX[id] ? exerciseNameFor(EXIDX[id]) : id}</span></span></div>)}
       {e1prs.map(p => <div key={p.id} className="small accent row" style={{ gap: 6, alignItems: 'flex-start' }}><Icon name="chartLine" style={{ fontSize: 'var(--fs-footnote)', marginTop: 2, flex: 'none' }} /><span>{t('Best estimated 1RM:')} <span className={exerciseNameClass(EXIDX[p.id])}>{EXIDX[p.id] ? exerciseNameFor(EXIDX[p.id]) : p.id}</span> · {fmtNum(p.est)} {st.unit}</span></div>)}
     </div>}
-    {/* Done is one tap away right under the numbers: the body map, what's next and the photo
-        corner sit below it for whoever wants them, nobody has to scroll to leave (Discord). */}
     <div className="fin-actions">
-      <Button variant="primary" onClick={() => closeThenNav(close, '/home')}>{t('Nice!')}</Button>
-      <Button variant="tinted" onClick={() => closeThenNav(close, '/social/share/' + encodeURIComponent(socialWorkoutId(w)))}>{t('Share to feed')}</Button>
-      {/* The workout as a picture for a Story or a chat (components/ShareCard.jsx), the same
-          card History's Share as image makes. */}
-      {isOn(st, 'motivation') && <Button variant="tinted" icon="share" data-fin-share onClick={() => shareWorkoutSheet(S().workouts.find(x => x.id === w.id) || w)}>{t('Share')}</Button>}
+      <Button variant="primary" onClick={() => closeThenNav(close, '/social/share/' + encodeURIComponent(socialWorkoutId(w)))}>{t('Share to feed')}</Button>
+      <Button variant="tinted" onClick={() => closeThenNav(close, '/home')}>{t('Save')}</Button>
     </div>
-    <div style={{ height: 14 }} />
-    <h4 className="sec" style={{ textAlign: 'start' }}>{t('What you just trained')}</h4>
-    <BodyMap load={loadOfWorkouts([w])} body={st.body} />
     <div style={{ height: 14 }} />
     <LastAndNext st={st} w={w} />
     <CardioDone st={st} w={w} />
     <KeepInRoutine additions={additions} />
-    {/* The moment for a progress photo or the clip of a set: the workout is already saved, so
-        what is added here goes straight onto its record. */}
-    <div style={{ textAlign: 'start' }}><WorkoutMediaSection w={w} hint /></div>
   </div>
 }
 export function finishWorkout() {

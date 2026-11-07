@@ -3,10 +3,11 @@ import SocialReport from '../components/SocialReport.jsx'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useStore } from '../store/useStore.js'
 import { socialScope, socialPostsAvailable, readProfile, readOwnPost, readPost, publishPost, deletePost, uploadPostPhoto, prepareAvatar, postPhotoBlob } from '../lib/social-api.js'
-import { buildSocialSnapshot, socialWorkoutId } from '../lib/social-snapshot.js'
+import { buildSocialSnapshot, socialWorkoutId,averageHeartRateOf } from '../lib/social-snapshot.js'
 import { readDraft, saveDraft, deleteDraft, postRequestId, sendDraft } from '../lib/social-drafts.js'
 import { exOr } from '../lib/exercises.js'
-import { exerciseNameText } from '../lib/format.js'
+import { socialVolume } from '../lib/social-metrics.js'
+import { exerciseNameText,fmtNum,fmtVol } from '../lib/format.js'
 import { t } from '../lib/i18n.js'
 import { Button } from '../components/ui.jsx'
 import SocialGate from '../components/SocialGate.jsx'
@@ -20,11 +21,13 @@ export default function PostComposer() {
   return <Composer key={scope + ':' + server + ':' + source + ':' + postId} source={source} postId={postId} scope={scope} user={user} />
 }
 const findWorkout = source => useStore.getState().S.workouts?.find(w => socialWorkoutId(w) === source)
-const snapshotOf = w => buildSocialSnapshot(w, useStore.getState().S, e => e.n || e.name || exerciseNameText(exOr(e.id)))
+const snapshotOf = (w,shareHeartRate=false) => buildSocialSnapshot(w, useStore.getState().S, e => e.n || e.name || exerciseNameText(exOr(e.id)),{shareHeartRate})
 
 function Composer({ source, postId, scope, user }) {
   const nav = useNavigate(), [draft, setDraft] = useState(null), [post, setPost] = useState(null), [epoch, setEpoch] = useState(null)
   const [loading, setLoading] = useState(true), [busy, setBusy] = useState(false), [error, setError] = useState(''), [notice, setNotice] = useState('')
+  const [photoOptions,setPhotoOptions]=useState(false),photoDialog=useRef(null)
+  useEffect(()=>{if(photoOptions)photoDialog.current?.showModal();else photoDialog.current?.close()},[photoOptions])
   const [image, setImage] = useState(null), [confirmDelete, setConfirmDelete] = useState(false)
   const live = useRef(true), lock = useRef(false), latest = useRef(null), latestPost = useRef(null), picker = useRef(null), camera = useRef(null)
   latest.current = draft
@@ -32,7 +35,7 @@ function Composer({ source, postId, scope, user }) {
   const valid = () => live.current && socialScope(useStore.getState().user) === scope
   useEffect(() => { live.current = true; return () => { live.current = false } }, [])
   const newDraft = (w, profileEpoch, p = null) => ({ scope, sourceWorkoutId: p?.sourceWorkoutId || socialWorkoutId(w), profileEpoch,
-    snapshot: p?.snapshot || snapshotOf(w), caption: p?.caption || '', audience: p?.audience || 'followers',
+    snapshot: p?.snapshot || snapshotOf(w), caption: p?p.caption:(w?.hevyDescription||''), audience: p?.audience || 'followers',
     photo: null, assetId: p?.assetId || null, postId: p?.id || null, revision: p?.revision, requestId: postRequestId(), confirmed: false, status: 'draft' })
   const load = async () => {
     setLoading(true); setError('')
@@ -141,9 +144,12 @@ function Composer({ source, postId, scope, user }) {
     } catch { lock.current = false; if (valid()) { setError(t('Could not save your draft on this device.')); setBusy(false) } }
   }
   const keep = async () => {
-    const d = { ...draft, confirmed: false, status: 'draft' }; setDraft(d)
-    try { await saveDraft(d); if (valid()) setNotice(t('Draft saved.')) }
+    if(lock.current||!draft||!valid())return
+    lock.current=true;setBusy(true)
+    const d = { ...draft, confirmed: false, status: 'draft' }; latest.current=d;setDraft(d)
+    try { await saveDraft(d); if (valid()) nav('/home') }
     catch { if (valid()) setError(t('Could not save your draft on this device.')) }
+    finally {lock.current=false;if(valid())setBusy(false)}
   }
   const remove = async () => {
     setBusy(true); setError('')
@@ -160,19 +166,27 @@ function Composer({ source, postId, scope, user }) {
     {notice && <div className="card" role="status">{notice}</div>}
     {draft && !notice && !error && ['pending', 'failed'].includes(draft.status) && <div className="card" role="status">{draft.status === 'failed' ? t('Could not publish. Your draft is kept.') : busy ? t('Saving…') : t('Publishing queued. It will retry when this screen reconnects.')}</div>}
     {!loading && (draft || post) && <div className="card">
-      <PostPreview snapshot={draft?.snapshot || post.snapshot} />
-      <p className="small dim">{t('Only this preview, caption and selected photo will be shared. Private notes, body weight, health data and location stay private.')}</p>
+      {draft?<><h2>{draft.snapshot.title||t('Workout')}</h2><dl className="post-metrics composer-metrics">
+        <div><dt>{t('Exercises')}</dt><dd>{fmtNum(draft.snapshot.exercises.length)}</dd></div>
+        <div><dt>{t('Volume')}</dt><dd>{fmtVol(Math.round(socialVolume(draft.snapshot).value),socialVolume(draft.snapshot).unit)}</dd></div>
+        <div><dt>{t('PRs')}</dt><dd>{fmtNum(draft.snapshot.records||0)}</dd></div>
+      </dl></>:<PostPreview snapshot={post.snapshot} />}
+      <p className="small dim">{t('Your workout, caption and selected photo will be shared. Notes, body weight, location and raw health data stay private.')}</p>
       {image && <img className="post-photo" src={image} alt={t('Workout photo')} />}
       {draft ? <form onSubmit={confirmPublish}><fieldset disabled={busy}>
+        {(averageHeartRateOf(findWorkout(draft.sourceWorkoutId))||post?.snapshot.averageHeartRate)&&<label className="social-consent"><input type="checkbox" checked={!!draft.snapshot.averageHeartRate} onChange={ev=>{const {averageHeartRate,...snapshot}=draft.snapshot;change({snapshot:ev.target.checked?{...snapshot,averageHeartRate:averageHeartRateOf(findWorkout(draft.sourceWorkoutId))||post.snapshot.averageHeartRate}:snapshot})}} /><span>{t('Share average heart rate')}</span></label>}
         <label>{t('Post caption')}<textarea aria-label={t('Post caption')} maxLength={2000} rows={3} value={draft.caption} onChange={ev => change({ caption: ev.target.value })} /></label>
-        <label>{t('Post audience')}<select aria-label={t('Post audience')} value={draft.audience} onChange={ev => change({ audience: ev.target.value })}><option value="followers">{t('Followers')}</option><option value="members">{t('Server members')}</option></select></label>
-        <div className="social-actions"><Button type="button" variant="tinted" onClick={() => picker.current?.click()}>{t('Choose photo')}</Button><Button type="button" variant="tinted" onClick={() => camera.current?.click()}>{t('Take photo')}</Button>
+        <div className="composer-audience" role="group" aria-label={t('Post audience')}>
+          {[['followers',t('Followers')],['members',t('Public')]].map(([value,label])=><Button key={value} type="button" variant={draft.audience===value?'primary':'tinted'} aria-pressed={draft.audience===value} onClick={()=>change({audience:value})}>{label}</Button>)}
+        </div>
+        <p className="small dim">{draft.audience==='members'?t('Public posts are visible to signed-in members of this server.'):t('Only your followers can see this post.')}</p>
+        <div className="social-actions"><Button type="button" variant="tinted" aria-haspopup="dialog" onClick={() => setPhotoOptions(true)}>{t('Add photo')}</Button>
           {draft.assetId && <Button type="button" variant="ghost" onClick={() => change({ photo: null, assetId: null })}>{t('Remove photo')}</Button>}</div>
         <input ref={picker} type="file" accept="image/*" hidden onChange={pick} /><input ref={camera} type="file" accept="image/*" capture="environment" hidden onChange={pick} />
-        {draft.postId && findWorkout(draft.sourceWorkoutId) && <Button type="button" variant="ghost" onClick={() => change({ snapshot: snapshotOf(findWorkout(draft.sourceWorkoutId)) })}>{t('Refresh workout preview')}</Button>}
+        {draft.postId && findWorkout(draft.sourceWorkoutId) && <Button type="button" variant="ghost" onClick={() => change({ snapshot: snapshotOf(findWorkout(draft.sourceWorkoutId),!!draft.snapshot.averageHeartRate) })}>{t('Refresh workout preview')}</Button>}
         {!draft.postId && !findWorkout(draft.sourceWorkoutId) && <p role="alert">{t('Workout not found. Your saved posts are separate.')}</p>}
-        <div className="social-actions"><Button type="submit" variant="primary" disabled={!draft.profileEpoch || (!draft.postId && !findWorkout(draft.sourceWorkoutId))}>{t('Publish post')}</Button><Button type="button" onClick={keep}>{t('Save draft')}</Button></div>
-        <Button type="button" variant="ghost" onClick={keep}>{t('Cancel publishing')}</Button>
+        <div className="social-actions"><Button type="submit" variant="primary" disabled={!draft.profileEpoch || (!draft.postId && !findWorkout(draft.sourceWorkoutId))}>{t('Publish post')}</Button></div>
+        <Button type="button" variant="ghost" onClick={keep}>{draft.postId?t('Cancel'):t('Cancel and save private')}</Button>
         {!draft.profileEpoch && <Button type="button" onClick={() => nav('/social')}>{t('Social profile')}</Button>}
       </fieldset></form> : <>
         <p className="social-bio">{post.caption}</p><p className="small dim">{post.audience === 'followers' ? t('Followers') : t('Server members')}</p>
@@ -181,5 +195,12 @@ function Composer({ source, postId, scope, user }) {
         {confirmDelete && <div role="alert"><p>{t('Delete this post? Your private workout will be kept.')}</p><Button disabled={busy} variant="danger" onClick={remove}>{t('Delete post')}</Button><Button disabled={busy} onClick={() => setConfirmDelete(false)}>{t('Cancel')}</Button></div>}
       </>}
     </div>}
+    <dialog ref={photoDialog} className="composer-photo-dialog" aria-label={t('Add photo')} onCancel={()=>setPhotoOptions(false)} onClick={ev=>{if(ev.target===ev.currentTarget)setPhotoOptions(false)}}>
+      <h2>{t('Add photo')}</h2><div className="social-actions">
+        <Button type="button" disabled={busy} onClick={()=>{setPhotoOptions(false);picker.current?.click()}}>{t('Choose photo')}</Button>
+        <Button type="button" disabled={busy} onClick={()=>{setPhotoOptions(false);camera.current?.click()}}>{t('Take photo')}</Button>
+        <Button type="button" variant="ghost" onClick={()=>setPhotoOptions(false)}>{t('Cancel')}</Button>
+      </div>
+    </dialog>
   </div>
 }

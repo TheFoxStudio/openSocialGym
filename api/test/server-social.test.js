@@ -43,6 +43,15 @@ test('timeline, reporting, owner export and administrator takedown enforce HTTP 
   await h.req('/api/social/follows/one', { uid: 'two', method: 'PUT' });
   assert.equal((await (await h.req('/api/social/feed', { uid: 'two' })).json()).posts[0].id, post.id);
   assert.equal((await (await h.req('/api/social/feed/check', { uid: 'two', method: 'POST', body: { ids: [post.id] } })).json()).viewerId, 'two');
+  const likePath='/api/social/posts/'+post.id+'/like',commentId=crypto.randomUUID(),commentsPath='/api/social/posts/'+post.id+'/comments';
+  assert.equal((await h.req(likePath,{uid:null,method:'PUT'})).status,401);
+  assert.equal((await(await h.req(likePath,{uid:'two',method:'PUT'})).json()).engagement.likes,1);
+  assert.equal((await(await h.req(likePath,{uid:'two',method:'DELETE'})).json()).engagement.likes,0);
+  assert.equal((await h.req(commentsPath+'/'+commentId,{uid:'two',method:'PUT',body:{text:'Good session'}})).status,200);
+  assert.equal((await(await h.req(commentsPath)).json()).comments[0].text,'Good session');
+  assert.equal((await h.req(commentsPath,{uid:null})).status,401);
+  assert.equal((await h.req(commentsPath+'/'+commentId,{uid:'two',method:'DELETE'})).status,200);
+  assert.equal((await h.req(commentsPath+'/'+commentId,{uid:'two',method:'PUT',body:{text:'Good session'}})).status,410);
   assert.equal((await h.req('/api/admin/social/reports', { uid: null })).status, 401);
   assert.equal((await h.req('/api/admin/social/reports', { uid: 'two' })).status, 403);
   const { report } = await (await h.req('/api/social/reports', { uid: 'two', method: 'POST', body: { targetType: 'post', targetId: post.id, requestId: crypto.randomUUID(), reason: 'privacy', details: 'Review' } })).json();

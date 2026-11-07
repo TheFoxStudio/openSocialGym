@@ -1,5 +1,5 @@
 import { zipStore } from './zip.js'
-const SECTIONS = ['profile', 'posts', 'following', 'followers', 'blocks', 'reports']
+const SECTIONS = ['profile', 'posts', 'following', 'followers', 'blocks', 'reports', 'likes', 'comments']
 const UUID = /^[a-f0-9-]{36}$/
 export async function buildSocialExport({ scope, userId, currentScope, readPage, photo, avatar, drafts = async () => [], progress = () => {}, wait = ms => new Promise(r => setTimeout(r, ms)) }) {
   const check = () => { if (currentScope() !== scope) throw Error('export-context-changed') }

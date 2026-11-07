@@ -32,7 +32,7 @@ import './Tour.css'
 
 // What each stop says. Literal t() calls, so check-source-strings sees every one.
 const COPY = {
-  today: () => [t('Overview'), t('This week') + ' · ' + t('Workouts') + ' · ' + t('Training time')],
+  today: () => [t('Home'), t('Follow friends to see their workouts here. Your own shared workouts appear here too.')],
   'go-plan': () => [t('Off to Plan'), t('Your routines live behind this tab. Tap Plan.')],
   'plan-mode': () => [t('Week or rotation'), t('Train on fixed weekdays, or run your routines in a loop where the next one waits for you.')],
   'plan-views': () => [t('Your routines'), t('Schedule says when, Routines says what. Build your own or grab a starter plan.')],

@@ -87,9 +87,9 @@ switching its bind mount or `DATA_DIR` to the restored directory. Run the same s
 version as the backup first, then verify sign-in, private training, avatars, shared
 post images and follows using two accounts. Upgrade only after that check.
 
-Schema 4 is forward-migrated transactionally on server startup. To roll back to
+Schema 5 adds likes and comments and migrates transactionally on server startup. To roll back to
 older code, restore the complete pre-upgrade backup with that code; do not run an
-older server on schema 4 or restore only SQLite while leaving mismatched photos.
+older server on schema 5 or restore only SQLite while leaving mismatched photos.
 
 ## Storage monitoring and performance
 

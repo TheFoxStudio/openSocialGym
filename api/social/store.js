@@ -9,6 +9,7 @@ import { createPosts } from './posts.js';
 import { SocialError } from './errors.js';
 import { createCursorCodec } from './cursors.js';
 import { createModeration } from './moderation.js';
+import { createEngagement } from './engagement.js';
 export { SocialError } from './errors.js';
 
 const fail = (status, code, message) => { throw new SocialError(status, code, message); };
@@ -34,7 +35,7 @@ export function createSocialStore({ dataDir, accountExists, accountVisible = acc
   try { fs.chmodSync(file, 0o600); } catch { /* host filesystem may not support Unix modes */ }
   db.exec('PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000; PRAGMA journal_mode=DELETE;');
   const version = db.prepare('PRAGMA user_version').get().user_version;
-  if (version > 4) { db.close(); throw new Error('Social database is newer than this server; restore a compatible version.'); }
+  if (version > 5) { db.close(); throw new Error('Social database is newer than this server; restore a compatible version.'); }
   if (version === 0) db.exec(`BEGIN IMMEDIATE;
     CREATE TABLE profiles (
       account_id TEXT PRIMARY KEY, handle TEXT NOT NULL UNIQUE COLLATE NOCASE,
@@ -114,6 +115,20 @@ export function createSocialStore({ dataDir, accountExists, accountVisible = acc
       db.exec('PRAGMA user_version=4; COMMIT;');
     } catch (e) { db.exec('ROLLBACK'); db.close(); throw e; }
   }
+  if (version < 5) {
+    try {
+      db.exec(`BEGIN IMMEDIATE;
+        CREATE TABLE post_likes(post_id TEXT NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+          user_id TEXT NOT NULL REFERENCES profiles(account_id) ON DELETE CASCADE,created_at INTEGER NOT NULL,
+          PRIMARY KEY(post_id,user_id));
+        CREATE INDEX likes_user ON post_likes(user_id,post_id);
+        CREATE TABLE post_comments(id TEXT PRIMARY KEY,post_id TEXT NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+          user_id TEXT NOT NULL REFERENCES profiles(account_id) ON DELETE CASCADE,text TEXT NOT NULL,created_at INTEGER NOT NULL);
+        CREATE INDEX comments_post_date ON post_comments(post_id,created_at,id);
+        CREATE INDEX comments_user ON post_comments(user_id,id);
+        PRAGMA user_version=5; COMMIT;`);
+    } catch(e) { try { db.exec('ROLLBACK'); } catch {} db.close(); throw e; }
+  }
   const cursors = createCursorCodec(db.prepare("SELECT value FROM social_meta WHERE key='cursor_key'").get().value);
   const row = uid => active(uid) ? db.prepare('SELECT * FROM profiles WHERE account_id=?').get(uid) : null;
   const project = r => r ? { id: r.account_id, handle: r.handle, displayName: r.display_name, bio: r.bio,
@@ -127,6 +142,7 @@ export function createSocialStore({ dataDir, accountExists, accountVisible = acc
   const policy = createSocialPolicy({ db, active });
   const graph = createSocialGraph({ db, active, row, project, policy, transaction });
   const posts = createPosts({ db, active, policy, transaction, dataDir: dir, cursors });
+  const engagement = createEngagement({ db, posts, policy, active, cursors });
   const moderation = createModeration({ db, active, policy, transaction, posts, cursors });
   // A crash after account JSON was saved but before cleanup is repaired on next boot.
   for (const r of db.prepare('SELECT account_id FROM profiles').all()) {
@@ -143,6 +159,7 @@ export function createSocialStore({ dataDir, accountExists, accountVisible = acc
   return {
     ...graph,
     ...posts,
+    ...engagement,
     ...moderation,
     get(uid, viewer = uid) { return policy.canView(viewer, uid) ? project(row(uid)) : null; },
     save(uid, body) {

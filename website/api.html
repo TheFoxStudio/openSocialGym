@@ -248,7 +248,7 @@ main.api-main .lead { color: var(--fg-2); max-width: 58ch; margin: 14px 0 0; fon
   <p class="api-facts">
     <span>OpenAPI 3.1.0</span>
     <span>openGym v1.4.3</span>
-    <span>136 endpoints</span>
+    <span>144 endpoints</span>
     <span>AGPL-3.0-or-later</span>
   </p>
 
@@ -298,6 +298,201 @@ main.api-main .lead { color: var(--fg-2); max-width: 58ch; margin: 14px 0 0; fon
   <h2>Social profiles</h2>
   <p class="sub">Opt-in member profiles and authenticated avatars (SOCIAL_ENABLED=1).</p>
   <div class="eps">
+
+<details class="ep" id="op-undefined">
+  <summary>
+    <span class="m put">PUT</span>
+    <span class="ep-path"><code>/api/social/posts/{post}/like</code></span>
+    <span class="ep-chev" aria-hidden="true"></span>
+    <span class="ep-sum">Like an accessible workout post</span>
+  </summary>
+  <div class="ep-body">
+<p>Idempotent. Requires an opted-in social profile and current post access.</p>
+    <p class="ep-auth"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>Requires a session: the cookie set at sign-in, or <code>Authorization: Bearer &lt;token&gt;</code> from mobile-app pairing.</span></p>
+
+
+    <p class="ep-h">Responses</p>
+    <div class="ptab">
+  <div class="prow rrow">
+    <span class="r-code s2">200</span>
+    <span class="p-desc">viewerId and current engagement counts</span>
+  </div>
+  <div class="prow rrow">
+    <span class="r-code s4">401</span>
+    <span class="p-desc">Not signed in</span>
+  </div>
+  <div class="prow rrow">
+    <span class="r-code s4">404</span>
+    <span class="p-desc">Post inaccessible or social disabled</span>
+  </div>
+  <div class="prow rrow">
+    <span class="r-code s4">409</span>
+    <span class="p-desc">Social profile required</span>
+  </div>
+  <div class="prow rrow">
+    <span class="r-code s4">429</span>
+    <span class="p-desc">Write rate limit</span>
+  </div>
+    </div>
+  </div>
+</details>
+
+<details class="ep" id="op-undefined">
+  <summary>
+    <span class="m delete">DELETE</span>
+    <span class="ep-path"><code>/api/social/posts/{post}/like</code></span>
+    <span class="ep-chev" aria-hidden="true"></span>
+    <span class="ep-sum">Remove your like from an accessible post</span>
+  </summary>
+  <div class="ep-body">
+
+    <p class="ep-auth"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>Requires a session: the cookie set at sign-in, or <code>Authorization: Bearer &lt;token&gt;</code> from mobile-app pairing.</span></p>
+
+
+    <p class="ep-h">Responses</p>
+    <div class="ptab">
+  <div class="prow rrow">
+    <span class="r-code s2">200</span>
+    <span class="p-desc">viewerId and current engagement counts</span>
+  </div>
+  <div class="prow rrow">
+    <span class="r-code s4">401</span>
+    <span class="p-desc">Not signed in</span>
+  </div>
+  <div class="prow rrow">
+    <span class="r-code s4">404</span>
+    <span class="p-desc">Post inaccessible or social disabled</span>
+  </div>
+    </div>
+  </div>
+</details>
+
+<details class="ep" id="op-undefined">
+  <summary>
+    <span class="m get">GET</span>
+    <span class="ep-path"><code>/api/social/posts/{post}/comments</code></span>
+    <span class="ep-chev" aria-hidden="true"></span>
+    <span class="ep-sum">Read visible comments on an accessible workout post</span>
+  </summary>
+  <div class="ep-body">
+<p>Ascending creation time and ID, current post access and blocks rechecked. At most 200 candidate rows per page. Removed comment text is never returned.</p>
+    <p class="ep-auth"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>Requires a session: the cookie set at sign-in, or <code>Authorization: Bearer &lt;token&gt;</code> from mobile-app pairing.</span></p>
+<p class="ep-h">Query parameters</p><div class="ptab">
+  <div class="prow">
+    <span class="p-name">cursor</span>
+    <span class="p-type">string</span>
+    <span class="p-desc"></span>
+  </div>
+  <div class="prow">
+    <span class="p-name">limit</span>
+    <span class="p-type">integer <span class="p-hint">(1&ndash;50, default 20)</span></span>
+    <span class="p-desc"></span>
+  </div>
+</div>
+
+    <p class="ep-h">Responses</p>
+    <div class="ptab">
+  <div class="prow rrow">
+    <span class="r-code s2">200</span>
+    <span class="p-desc">viewerId</span>
+  </div>
+  <div class="prow rrow">
+    <span class="r-code s4">400</span>
+    <span class="p-desc">Invalid cursor or page size</span>
+  </div>
+  <div class="prow rrow">
+    <span class="r-code s4">401</span>
+    <span class="p-desc">Not signed in</span>
+  </div>
+  <div class="prow rrow">
+    <span class="r-code s4">404</span>
+    <span class="p-desc">Post inaccessible or social disabled</span>
+  </div>
+    </div>
+  </div>
+</details>
+
+<details class="ep" id="op-undefined">
+  <summary>
+    <span class="m put">PUT</span>
+    <span class="ep-path"><code>/api/social/posts/{post}/comments/{comment}</code></span>
+    <span class="ep-chev" aria-hidden="true"></span>
+    <span class="ep-sum">Create a comment using a stable client-generated UUID</span>
+  </summary>
+  <div class="ep-body">
+<p>Same ID and text retries return the original comment. Changed text conflicts. Removed IDs are tombstones until their post or account is removed.</p>
+    <p class="ep-auth"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>Requires a session: the cookie set at sign-in, or <code>Authorization: Bearer &lt;token&gt;</code> from mobile-app pairing.</span></p>
+
+<p class="ep-h">Request body <span class="p-hint">(JSON)</span></p><div class="ptab">
+  <div class="prow">
+    <span class="p-name">text<em class="p-req" title="required">required</em></span>
+    <span class="p-type">string <span class="p-hint">(&le; 1000 chars)</span></span>
+    <span class="p-desc"></span>
+  </div>
+</div>
+    <p class="ep-h">Responses</p>
+    <div class="ptab">
+  <div class="prow rrow">
+    <span class="r-code s2">200</span>
+    <span class="p-desc">viewerId</span>
+  </div>
+  <div class="prow rrow">
+    <span class="r-code s4">400</span>
+    <span class="p-desc">Invalid comment</span>
+  </div>
+  <div class="prow rrow">
+    <span class="r-code s4">401</span>
+    <span class="p-desc">Not signed in</span>
+  </div>
+  <div class="prow rrow">
+    <span class="r-code s4">404</span>
+    <span class="p-desc">Post inaccessible or social disabled</span>
+  </div>
+  <div class="prow rrow">
+    <span class="r-code s4">409</span>
+    <span class="p-desc">Social profile required or comment ID conflict</span>
+  </div>
+  <div class="prow rrow">
+    <span class="r-code s4">410</span>
+    <span class="p-desc">Comment was removed</span>
+  </div>
+  <div class="prow rrow">
+    <span class="r-code s4">429</span>
+    <span class="p-desc">Write rate limit</span>
+  </div>
+    </div>
+  </div>
+</details>
+
+<details class="ep" id="op-undefined">
+  <summary>
+    <span class="m delete">DELETE</span>
+    <span class="ep-path"><code>/api/social/posts/{post}/comments/{comment}</code></span>
+    <span class="ep-chev" aria-hidden="true"></span>
+    <span class="ep-sum">Delete a comment you wrote or a comment on your own post</span>
+  </summary>
+  <div class="ep-body">
+<p>Erases text and retains an ID tombstone to prevent response-loss retries from resurrecting removed content.</p>
+    <p class="ep-auth"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>Requires a session: the cookie set at sign-in, or <code>Authorization: Bearer &lt;token&gt;</code> from mobile-app pairing.</span></p>
+
+
+    <p class="ep-h">Responses</p>
+    <div class="ptab">
+  <div class="prow rrow">
+    <span class="r-code s2">200</span>
+    <span class="p-desc">viewerId and engagement counts</span>
+  </div>
+  <div class="prow rrow">
+    <span class="r-code s4">401</span>
+    <span class="p-desc">Not signed in</span>
+  </div>
+  <div class="prow rrow">
+    <span class="r-code s4">404</span>
+    <span class="p-desc">Post inaccessible</span>
+  </div>
+    </div>
+  </div>
+</details>
 
 <details class="ep" id="op-undefined">
   <summary>
@@ -402,7 +597,7 @@ main.api-main .lead { color: var(--fg-2); max-width: 58ch; margin: 14px 0 0; fon
 <p class="ep-h">Request body <span class="p-hint">(JSON)</span></p><div class="ptab">
   <div class="prow">
     <span class="p-name">targetType<em class="p-req" title="required">required</em></span>
-    <span class="p-type">&quot;profile&quot; | &quot;post&quot;</span>
+    <span class="p-type">&quot;profile&quot; | &quot;post&quot; | &quot;comment&quot;</span>
     <span class="p-desc"></span>
   </div>
   <div class="prow">
@@ -469,7 +664,7 @@ main.api-main .lead { color: var(--fg-2); max-width: 58ch; margin: 14px 0 0; fon
 <p class="ep-h">Query parameters</p><div class="ptab">
   <div class="prow">
     <span class="p-name">section<em class="p-req" title="required">required</em></span>
-    <span class="p-type">&quot;profile&quot; | &quot;posts&quot; | &quot;following&quot; | &quot;followers&quot; | &quot;blocks&quot; | &quot;reports&quot;</span>
+    <span class="p-type">&quot;profile&quot; | &quot;posts&quot; | &quot;following&quot; | &quot;followers&quot; | &quot;blocks&quot; | &quot;reports&quot; | &quot;likes&quot; | &quot;comments&quot;</span>
     <span class="p-desc"></span>
   </div>
   <div class="prow">
@@ -5642,6 +5837,26 @@ main.api-main .lead { color: var(--fg-2); max-width: 58ch; margin: 14px 0 0; fon
     <span class="p-desc"></span>
   </div>
   <div class="prow">
+    <span class="p-name">engagement</span>
+    <span class="p-type">object</span>
+    <span class="p-desc"></span>
+  </div>
+  <div class="prow">
+    <span class="p-name">engagement.likes</span>
+    <span class="p-type">integer</span>
+    <span class="p-desc"></span>
+  </div>
+  <div class="prow">
+    <span class="p-name">engagement.liked</span>
+    <span class="p-type">boolean</span>
+    <span class="p-desc"></span>
+  </div>
+  <div class="prow">
+    <span class="p-name">engagement.comments</span>
+    <span class="p-type">integer</span>
+    <span class="p-desc"></span>
+  </div>
+  <div class="prow">
     <span class="p-name">author</span>
     <span class="p-type">object</span>
     <span class="p-desc"></span>
@@ -5753,6 +5968,26 @@ main.api-main .lead { color: var(--fg-2); max-width: 58ch; margin: 14px 0 0; fon
     <span class="p-desc"></span>
   </div>
   <div class="prow">
+    <span class="p-name">totalVolume</span>
+    <span class="p-type">number <span class="p-hint">(0&ndash;1000000000000)</span></span>
+    <span class="p-desc"></span>
+  </div>
+  <div class="prow">
+    <span class="p-name">volumeUnit</span>
+    <span class="p-type">&quot;kg&quot; | &quot;lb&quot;</span>
+    <span class="p-desc"></span>
+  </div>
+  <div class="prow">
+    <span class="p-name">records</span>
+    <span class="p-type">integer <span class="p-hint">(0&ndash;10000)</span></span>
+    <span class="p-desc"></span>
+  </div>
+  <div class="prow">
+    <span class="p-name">averageHeartRate</span>
+    <span class="p-type">number <span class="p-hint">(1&ndash;300)</span></span>
+    <span class="p-desc">Only included with explicit sharing consent</span>
+  </div>
+  <div class="prow">
     <span class="p-name">title<em class="p-req" title="required">required</em></span>
     <span class="p-type">string <span class="p-hint">(&le; 120 chars)</span></span>
     <span class="p-desc"></span>
@@ -5775,6 +6010,16 @@ main.api-main .lead { color: var(--fg-2); max-width: 58ch; margin: 14px 0 0; fon
   <div class="prow">
     <span class="p-name">exercises[].name<em class="p-req" title="required">required</em></span>
     <span class="p-type">string <span class="p-hint">(&le; 160 chars)</span></span>
+    <span class="p-desc"></span>
+  </div>
+  <div class="prow">
+    <span class="p-name">exercises[].catalogId</span>
+    <span class="p-type">string <span class="p-hint">(&le; 64 chars)</span></span>
+    <span class="p-desc"></span>
+  </div>
+  <div class="prow">
+    <span class="p-name">exercises[].setCount</span>
+    <span class="p-type">integer <span class="p-hint">(1&ndash;100)</span></span>
     <span class="p-desc"></span>
   </div>
   <div class="prow">
@@ -5995,6 +6240,26 @@ main.api-main .lead { color: var(--fg-2); max-width: 58ch; margin: 14px 0 0; fon
   <div class="ep-body">
 
 <div class="ptab">
+  <div class="prow">
+    <span class="p-name">overview</span>
+    <span class="p-type">object</span>
+    <span class="p-desc">Totals and up to four recent photos from published workouts currently visible to the viewer; excludes private training.</span>
+  </div>
+  <div class="prow">
+    <span class="p-name">overview.totalWorkouts</span>
+    <span class="p-type">integer <span class="p-hint">(0&ndash;)</span></span>
+    <span class="p-desc"></span>
+  </div>
+  <div class="prow">
+    <span class="p-name">overview.totalVolumeKg</span>
+    <span class="p-type">number <span class="p-hint">(0&ndash;)</span></span>
+    <span class="p-desc"></span>
+  </div>
+  <div class="prow">
+    <span class="p-name">overview.photos</span>
+    <span class="p-type"><a href="#schema-SocialPost">SocialPost</a>[]</span>
+    <span class="p-desc"></span>
+  </div>
   <div class="prow">
     <span class="p-name">relationship</span>
     <span class="p-type"><a href="#schema-SocialRelationship">SocialRelationship</a></span>

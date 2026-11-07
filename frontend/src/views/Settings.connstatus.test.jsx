@@ -77,16 +77,16 @@ const mount = () => act(() => root.render(<Settings page="look" />))
 const row = () => [...host.querySelectorAll('.lrow')].find(r => r.textContent.includes('Show connection status'))
 
 describe('Show connection status', () => {
-  it('is there with no account, on a phone kept local, and on by default', () => {
+  it('is there with no account, on a phone kept local, and off by default', () => {
     mocks.MOBILE = true
     mount()
     expect(row()).toBeTruthy()
     expect(row().textContent).toContain('A dot on Home still warns when syncing is stuck.')
-    expect(row().querySelector('[role="switch"]').getAttribute('aria-checked')).toBe('true')
+    expect(row().querySelector('[role="switch"]').getAttribute('aria-checked')).toBe('false')
   })
 
   it('switches the profile setting off and on', () => {
-    mount()
+    mocks.S.connStatus=true;mount()
     act(() => { row().querySelector('[role="switch"]').click() })
     expect(mocks.S.connStatus).toBe(false)
     mount()
@@ -117,7 +117,7 @@ describe('guest footers', () => {
   })
 
   it('Account says guest mode once: the banner says it, the footer only when the banner is off', () => {
-    act(() => root.render(<Settings page="account" />))
+    mocks.S.connStatus=true;act(() => root.render(<Settings page="account" />))
     expect(footers().filter(f => f.includes('Guest mode'))).toEqual([])
     mocks.S = { ...mocks.S, connStatus: false }
     act(() => root.render(<Settings key="off" page="account" />))
@@ -130,3 +130,9 @@ describe('guest footers', () => {
     expect(footers().filter(f => f.includes('Guest mode'))).toHaveLength(1)
   })
 })
+
+it('starts every On Home switch off when preferences are absent',()=>{
+ mount();const section=[...host.querySelectorAll('.sect')].find(s=>s.textContent.includes('On Home'));
+ const switches=section?.querySelectorAll('[role=switch]')||[];expect(switches.length).toBeGreaterThanOrEqual(5);
+ expect([...switches].every(s=>s.getAttribute('aria-checked')==='false')).toBe(true);
+});

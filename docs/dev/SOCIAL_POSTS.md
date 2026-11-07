@@ -49,11 +49,12 @@ again by the runtime-independent `api/social/snapshot.js` on the server:
   individually; holds, cardio, drops and rest-pause totals retain their semantics.
 - Weight numbers carry explicit kg/lb units, including per-exercise unit pins.
   Cardio speeds are explicitly km/h. Custom exercise names are captured so viewers
-  do not need access to private exercise definitions. No bodyweight-based aggregate
-  volume is published; set data is shown directly.
-- Private session/exercise/set notes, body weight, health/heart-rate readings,
+  do not need access to private exercise definitions. Snapshots include total volume, record counts and catalog exercise identifiers
+  when available.
+- Private session/exercise/set notes, body weight, raw health/heart-rate readings,
   gym/location, routine internals, original image metadata and private attachments
-  are excluded. Unknown JSON fields are discarded by the server allowlist.
+  are excluded. Average heart rate is shared only through an explicit composer
+  checkbox and appears in the publication preview. Unknown JSON fields are discarded by the server allowlist.
 - Strings, numeric ranges, dates, exercise/set counts and intensifier arrays are
   bounded. The server accepts the author's explicit client-provided snapshot;
   it does not inspect another user's private training document or certify that
@@ -175,3 +176,27 @@ the separate post-photo files, account JSON, or private training/uploads. A full
 restore needs all of them. Do not downgrade a schema-v3 database in place; restore
 the coordinated pre-upgrade backup with the older release. Disabling social
 features preserves data and continues account-deletion cleanup.
+
+
+## Compact completion and composer
+
+The completion modal places smaller duration, volume, sets and PR totals beside
+the trained-muscles graphic. Share to feed is primary; Save returns home with the
+already saved private workout. The separate image Share and private photo/video
+controls are removed from this modal.
+
+The sharing form displays exercise count, volume and PR count above the caption,
+without expanding individual exercises and sets. The full workout snapshot is
+still published and shown on the resulting post. Followers and Public are adjacent
+selectable buttons; Public retains the existing members audience and requires a
+signed-in server account. Add photo opens a native modal dialog with Choose photo
+and Take photo actions. Escape or Cancel dismisses it.
+
+There is no manual Save draft button. Automatic local draft persistence remains.
+Cancel and save private resets pending publication intent, persists an unconfirmed
+local draft, and returns home without publishing. The private workout was saved
+before entering the composer. Cancelling an edit preserves the existing post.
+
+Verification: eight focused completion/draft tests and the web build passed.
+Isolated Edge checks covered the side-by-side summary, audience buttons, photo
+popup and Escape, cancellation without a publish request, and 320 px width.

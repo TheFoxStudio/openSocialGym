@@ -3,6 +3,14 @@ import { buildSocialSnapshot, socialWorkoutId } from './social-snapshot.js'
 const workout = patch => ({ id: 'session', d: '2026-11-06', start: 1000, end: 3601000, name: 'Training', bw: 80, note: 'Private session note', gym: { name: 'Private gym' },
   media: [{ hash: 'private-photo' }], entries: [{ id: 'custom', note: 'Private injury', target: { mode: 'reps' }, sets: [{ done: true, w: 50, r: 6, hr: 160, note: 'Private set', media: { hash: 'form-video' } }] }], ...patch })
 describe('social workout snapshot', () => {
+  it('shares only an explicitly opted-in heart-rate average and accurate public summary fields',()=>{
+    const w=workout({hr:{avg:145,max:190},prs:['a','a','b']})
+    const normal=buildSocialSnapshot(w,{unit:'kg'},()=> 'Squat')
+    expect(normal.averageHeartRate).toBeUndefined();expect(normal.totalVolume).toBe(300);expect(normal.records).toBe(2)
+    const shared=buildSocialSnapshot(w,{unit:'kg'},()=> 'Squat',{shareHeartRate:true})
+    expect(shared.averageHeartRate).toBe(145);expect(JSON.stringify(shared)).not.toContain('190')
+    expect(shared.exercises[0].setCount).toBe(1)
+  })
   it('shares only completed work with no private notes, health, bodyweight, location or attachments', () => {
     const w = workout({}), before = JSON.stringify(w), result = buildSocialSnapshot(w, { unit: 'kg' }, () => 'Custom squat')
     expect(result.exercises[0].name).toBe('Custom squat')

@@ -223,8 +223,12 @@ export const DEF = {
   checkIn: true,
   // Whether the body-weight summary card is shown on Home. Off only hides that card: existing
   // entries, Stats, imports and the separate pre-workout weigh-in flow keep working.
-  // Defaults on; an older profile without the key reads as on (`!== false`).
-  showWeightCard: true,
+  // Home cards are opt-in; keep existing explicit preferences.
+  showWeightCard: false,
+  recoveryHint: false,
+  recap: false,
+  homeMuscleSets: false,
+  monthlyChallenges: false,
   // Whether Start opens the quick weigh-in first (sheets.jsx startFlow, issue #137). Off starts
   // the session straight away; weight can still be logged from Home/Stats. On here, so an
   // older profile without the key reads as on (`!== false`) and keeps the step it had; a profile
@@ -232,9 +236,8 @@ export const DEF = {
   // home in the morning, not at the gym, and the step cost a tap every workout.
   weighIn: true,
   // The connection banner at the top (components/SyncBanner.jsx, #369/#330). Off hides it; a
-  // stuck sync then shows as a dot on Home instead. Defaults on; an older profile without the
-  // key reads as on (`!== false`).
-  connStatus: true,
+  // stuck sync then shows as a dot on Home instead. Off by default.
+  connStatus: false,
   // Whether "Share as image" puts this session's muscle map on the card (sheets.jsx
   // ShareWorkoutImage, #453). On by default; absent reads as on (`!== false`).
   shareMap: true,
