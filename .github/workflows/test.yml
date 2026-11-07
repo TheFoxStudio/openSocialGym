@@ -72,6 +72,7 @@ jobs:
               - 'api/coach/prompts/**'
               - 'api/social/snapshot.js'
               - 'api/social/errors.js'
+              - 'api/social/metrics.js'
               - 'api/sync-stamps.js'
               - 'api/nudge-copy.js'
               - 'api/server.js'

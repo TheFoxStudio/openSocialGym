@@ -19,9 +19,9 @@ COPY frontend/package.json frontend/package-lock.json* ./
 # tool is now run with npx, docs/MOBILE.md, and not installed here).
 RUN npm ci --ignore-scripts
 COPY api/coach/core/ /app/api/coach/core/
-# Runtime-independent post allowlist shared by the preview and server. Never copy Node-only
+# Runtime-independent post allowlist and metrics shared by the frontend and server. Never copy Node-only
 # social storage/routes into the frontend build dependency tree.
-COPY api/social/snapshot.js api/social/errors.js /app/api/social/
+COPY api/social/snapshot.js api/social/errors.js api/social/metrics.js /app/api/social/
 COPY frontend/ ./
 # Which build this is, shown in the app as "1.3.8+<build>" next to the version. Without it every
 # image built between two releases calls itself the same thing, and "which build are you running?"
