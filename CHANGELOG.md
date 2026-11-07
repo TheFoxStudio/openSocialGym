@@ -3,6 +3,11 @@
 Newest first. Each release is a `## vX.Y.Z (YYYY-MM-DD)` section, and the release notes on
 GitHub and GitLab are that section, word for word. New work goes under `## Unreleased
 
+Social workout details now use exercise icons and readable set tables, including
+drop sets, rest-pause, timed sets and cardio. The comment send icon and Add photo
+popup are centered correctly.
+
+
 Shared workouts now use their workout date in the feed and profile, so publishing
 older saved or imported drafts places them correctly in the timeline.
 
