@@ -9,7 +9,8 @@
 // is open and the site already has the NFC permission (asked when you first write a sticker).
 // Anywhere else nfcSupport() answers false and the NFC rows stay away.
 //
-// Only NDEF stickers of our own: no card emulation, nothing that reads or copies a gym card.
+// Existing machine tags are read only during an explicit foreground scan; their URLs are never opened.
+// Assignment reads are separate from the existing blank-sticker writing feature.
 import { MOBILE } from './mobile.js'
 import { platformNow } from './platform-now.js'
 
@@ -119,7 +120,7 @@ export function onTagLink(cb) {
       if (gone || st?.state !== 'granted') return
       const reader = new globalThis.NDEFReader()
       reader.addEventListener('reading', ev => {
-        if (webAbort) return // a write is on: the sticker is being written, not read
+        if (webAbort||tagScanActive()) return // a write is on: the sticker is being written, not read
         for (const rec of ev?.message?.records || []) { const u = urlOf(rec); if (u) { cb(u); break } }
       })
       return reader.scan(ctrl ? { signal: ctrl.signal } : undefined)
@@ -129,3 +130,46 @@ export function onTagLink(cb) {
 }
 
 export function _resetNfcForTests() { pluginP = null; webAbort = null; supportP = null }
+
+// An explicit reader owns NFC until stopped. Assignment and workout reading never
+// race each other or the legacy link reader, and no scanned link is navigated.
+let readOwner=null
+export const tagScanActive=()=>!!readOwner
+export async function startTagScan(onRead,{once=false,onError=()=>{},onEnd=()=>{}}={}){
+ while(readOwner)await readOwner()
+ let ended=false,ctrl=null,handle=null,endHandle=null,native=null,stop,stopping=null
+ const finish=()=>{if(ended)return;ended=true;if(readOwner===stop)readOwner=null;ctrl?.abort();handle?.remove?.();endHandle?.remove?.();onEnd()}
+ stop=()=>{
+  if(stopping)return stopping
+  if(ended)return Promise.resolve()
+  ended=true;ctrl?.abort();handle?.remove?.();endHandle?.remove?.();onEnd()
+  stopping=(async()=>{try{if(native)await native.cancel()}catch{}finally{if(readOwner===stop)readOwner=null}})()
+  return stopping
+ }
+ readOwner=stop
+ const deliver=raw=>{if(ended)return;onRead(raw);if(once)stop()}
+ try{
+  if(webNfc()){
+   ctrl=new AbortController();const reader=new globalThis.NDEFReader()
+   reader.addEventListener('reading',ev=>{if(ended)return;const urls=[];for(const record of ev?.message?.records||[]){const url=urlOf(record);if(url)urls.push(url)};deliver({serialNumber:ev.serialNumber||'',urls})})
+   reader.addEventListener('readingerror',()=>{if(!ended)onError(Object.assign(Error('Could not read tag'),{code:'failed'}))})
+   await reader.scan({signal:ctrl.signal})
+  }else{
+   const w=await nfcPlugin();if(!w)throw Object.assign(Error('NFC unavailable'),{code:'unsupported'})
+   if(ended)return stop
+   native=w.p
+   if(platformNow()==='android'){
+    handle=await native.addListener('scan',deliver)
+    if(ended){handle.remove();return stop}
+    endHandle=await native.addListener('scanStopped',finish)
+    if(ended){endHandle.remove();return stop}
+    await native.startScan()
+   }else{
+    // Core NFC is a foreground, user-started session and resolves one tag.
+    native.read({alert:'Hold the top of your iPhone near the machine tag.'}).then(raw=>{deliver(raw);finish()}).catch(e=>{if(!ended){onError(e);finish()}})
+   }
+  }
+ }catch(e){await stop();const err=Object.assign(new Error(e.message||'NFC failed'),{code:writeErrorCode(e)});throw err}
+ if(ended)await stop()
+ return stop
+}

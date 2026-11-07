@@ -32,15 +32,16 @@ vi.mock('../lib/nfc.js', () => ({
   nfcSupport: vi.fn(() => Promise.resolve({ supported: true, enabled: true })),
   writeTag: vi.fn((url, opts) => m.write(url, opts)),
   cancelWrite: vi.fn(() => Promise.resolve()),
+  startTagScan: vi.fn(),
   onTagLink: vi.fn(cb => { m.onLink = cb; return () => { m.onLink = null } }),
 }))
 vi.mock('../sheets.jsx', () => ({
   startFlow: vi.fn(), confirmSheet: vi.fn(), exerciseDetailSheet: vi.fn(),
 }))
 
-import { nfcStickerSheet, nfcExerciseSheet, handleTagLink, useNfcTagLinks, addExerciseToSession, _resetNfcRunForTests } from './Nfc.jsx'
+import { nfcStickerSheet, nfcExerciseSheet, assignExerciseTagSheet, handleAssignedTag, handleTagLink, useNfcTagLinks, addExerciseToSession, _resetNfcRunForTests } from './Nfc.jsx'
 import { startFlow, confirmSheet, exerciseDetailSheet } from '../sheets.jsx'
-import { writeTag } from '../lib/nfc.js'
+import { writeTag,startTagScan } from '../lib/nfc.js'
 import { EXIDX } from '../lib/exercises.js'
 
 let host, root
@@ -212,3 +213,22 @@ describe('addExerciseToSession', () => {
     expect(addExerciseToSession(EX_B)).toBe(-1)
   })
 })
+
+it('assigned machine tags select existing exercises or add them once without a confirmation',()=>{
+ m.S.active={id:'session',cur:0,entries:[{id:EX_A,target:{sets:3,reps:10},sets:[]}]};
+ const tag={key:'tag-one',uidHash:'tag-one',payloadHash:null};m.S.nfcAssignments={[tag.key]:{...tag,exerciseId:EX_A}};
+ expect(handleAssignedTag(tag,10000)).toBe(true);expect(m.S.active.cur).toBe(0);
+ m.S.nfcAssignments[tag.key].exerciseId=EX_B;
+ expect(handleAssignedTag(tag,15000)).toBe(true);expect(m.S.active.entries[m.S.active.cur].id).toBe(EX_B);
+ const count=m.S.active.entries.length;handleAssignedTag(tag,15001);expect(m.S.active.entries.length).toBe(count);
+ expect(confirmSheet).not.toHaveBeenCalled();m.S.active.editingWorkoutId='past';expect(handleAssignedTag(tag,20000)).toBe(false);
+});
+
+it('reads and saves an existing machine tag without writing it',async()=>{
+ let scanned,options;startTagScan.mockImplementation(async(cb,opts)=>{scanned=cb;options=opts;return vi.fn()});
+ assignExerciseTagSheet(EXIDX[EX_A]);await openSheet();await click(button('Scan tag'));
+ await act(async()=>{await scanned({serialNumber:'01020304',urls:['https://gym.example/machine/42']});options.onEnd()});
+ expect(host.textContent).toContain('Tag read successfully.');await click(button('Save assignment'));
+ expect(Object.values(m.S.nfcAssignments).map(v=>v.exerciseId)).toEqual([EX_A]);expect(writeTag).not.toHaveBeenCalled();
+ expect(JSON.stringify(m.S.nfcAssignments)).not.toContain('gym.example');
+});

@@ -12,7 +12,7 @@ import CoreNFC
  * https://gym.orktork.space/nfc link on ours comes back to the page as opengym://nfc?... (through
  * gym.orktork.space/nfc, or straight away once gym.orktork.space is an associated domain), via @capacitor/app.
  *
- * Only NDEF stickers: no card emulation, nothing reads or copies a gym's access card.
+ * read() starts a foreground, read-only session for existing NDEF machine links.
  *
  * Usage from JS:
  *   const NfcTags = registerPlugin('NfcTags')
@@ -27,6 +27,7 @@ public class NfcTagsPlugin: CAPPlugin, CAPBridgedPlugin {
     public let jsName = "NfcTags"
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "isAvailable", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "read", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "write", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "cancel", returnType: CAPPluginReturnPromise),
     ]
@@ -44,6 +45,22 @@ public class NfcTagsPlugin: CAPPlugin, CAPBridgedPlugin {
         call.resolve(["supported": ok, "enabled": ok])
         #else
         call.resolve(["supported": false, "enabled": false])
+        #endif
+    }
+
+    @objc func read(_ call: CAPPluginCall) {
+        #if canImport(CoreNFC)
+        guard NFCNDEFReaderSession.readingAvailable else {call.reject("NFC unavailable","unsupported");return}
+        DispatchQueue.main.async {
+            self.settle(code:"cancelled",why:"replaced by a newer scan")
+            self.session?.invalidate()
+            self.pending=call;self.message=nil
+            let s=NFCNDEFReaderSession(delegate:self,queue:nil,invalidateAfterFirstRead:false)
+            s.alertMessage=call.getString("alert") ?? "Hold near the machine tag."
+            self.session=s;s.begin()
+        }
+        #else
+        call.reject("NFC unavailable","unsupported")
         #endif
     }
 
@@ -101,6 +118,7 @@ public class NfcTagsPlugin: CAPPlugin, CAPBridgedPlugin {
     /// Fails the write and closes the sheet with a short reason.
     private func fail(_ session: NFCNDEFReaderSession, _ code: String, _ why: String) {
         DispatchQueue.main.async {
+            guard self.session === session else{return}
             self.settle(code: code, why: why)
             session.invalidate(errorMessage: why)
         }
@@ -138,7 +156,24 @@ extension NfcTagsPlugin: NFCNDEFReaderSessionDelegate {
             tag.queryNDEFStatus { status, capacity, error in
                 if let error = error { self.fail(session, "failed", error.localizedDescription); return }
                 DispatchQueue.main.async {
-                    guard let message = self.message else { session.invalidate(); return }
+                    guard self.session === session, self.pending != nil else {return}
+                    // NDEF reads work on locked/read-only tags too. Never write in read mode.
+                    if self.message == nil {
+                        guard status != .notSupported else {self.fail(session,"unsupported","No readable NDEF message.");return}
+                        tag.readNDEF { message,error in
+                            if let error=error {self.fail(session,"failed",error.localizedDescription);return}
+                            let urls=(message?.records ?? []).compactMap { $0.wellKnownTypeURIPayload()?.absoluteString }.filter{$0.count<=2048}
+                            DispatchQueue.main.async {
+                                guard self.session === session,let call=self.pending else{return}
+                                self.pending=nil;self.session=nil
+                                if urls.isEmpty {call.reject("No readable NFC link.","unsupported")}
+                                else {call.resolve(["serialNumber":"","urls":Array(urls.prefix(8))])}
+                                session.invalidate()
+                            }
+                        }
+                        return
+                    }
+                    guard let message=self.message else{return}
                     switch status {
                     case .notSupported: self.fail(session, "unsupported", "This sticker can't hold a link.")
                     case .readOnly: self.fail(session, "read-only", "This sticker is locked.")

@@ -3285,3 +3285,5 @@ button.wl-summary{width:100%;padding:0 0 10px;text-align:start;border-radius:var
 .finish-muscles .bodymap .bm-ph{height:130px;max-width:50%}
 .fin-actions{flex-wrap:wrap}
 .fin-actions .btn:first-child{flex:1 1 auto}
+.workout-nfc{padding:0 0 6px;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.workout-nfc p{flex-basis:100%;margin:0}

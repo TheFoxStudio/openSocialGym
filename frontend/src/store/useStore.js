@@ -224,6 +224,7 @@ export const DEF = {
   // Whether the body-weight summary card is shown on Home. Off only hides that card: existing
   // entries, Stats, imports and the separate pre-workout weigh-in flow keep working.
   // Home cards are opt-in; keep existing explicit preferences.
+  nfcAssignments: {},
   showWeightCard: false,
   recoveryHint: false,
   recap: false,

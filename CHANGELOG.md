@@ -3,6 +3,11 @@
 Newest first. Each release is a `## vX.Y.Z (YYYY-MM-DD)` section, and the release notes on
 GitHub and GitLab are that section, word for word. New work goes under `## Unreleased
 
+Assign existing gym machine NFC tags from exercise details without changing the
+tag. Scanning during a workout selects the assigned exercise, or adds and selects
+it when missing. Assignments sync privately with your account.
+
+
 Social workout details now use exercise icons and readable set tables, including
 drop sets, rest-pause, timed sets and cardio. The comment send icon and Add photo
 popup are centered correctly.

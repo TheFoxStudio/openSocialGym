@@ -11,6 +11,7 @@ import android.nfc.Tag;
 import android.nfc.tech.Ndef;
 import android.nfc.tech.NdefFormatable;
 import com.getcapacitor.JSObject;
+import com.getcapacitor.JSArray;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
@@ -28,7 +29,7 @@ import java.io.IOException;
  *
  * Writing uses the adapter's reader mode while the page's sheet waits: the sticker comes straight
  * here, not to the system's tag dispatch, and is written as one NDEF URI record (a blank sticker
- * is NDEF-formatted first). Only NDEF stickers: no card emulation, nothing reads a gym's card.
+ * is NDEF-formatted first). startScan reads machine tag IDs and NDEF links without writing.
  *
  * Usage from JS:
  *   const NfcTags = registerPlugin('NfcTags')
@@ -38,7 +39,9 @@ import java.io.IOException;
  */
 @CapacitorPlugin(name = "NfcTags")
 public class NfcTagsPlugin extends Plugin {
-    private PluginCall pending;
+    private volatile PluginCall pending;
+    private volatile boolean scanning;
+    private volatile int scanEpoch;
 
     @Override
     public void load() {
@@ -88,6 +91,47 @@ public class NfcTagsPlugin extends Plugin {
         call.resolve(r);
     }
 
+    /** Read-only foreground mode intercepts the gym app's tag without opening its URL. */
+    @PluginMethod
+    public void startScan(PluginCall call) {
+        NfcAdapter a=adapter();
+        if(a==null){call.reject("this phone has no NFC","unsupported");return;}
+        if(!a.isEnabled()){call.reject("NFC is disabled","disabled");return;}
+        Activity act=getActivity();
+        act.runOnUiThread(()->{
+            if(pending!=null){pending.reject("replaced by scan","cancelled");pending=null;}
+            scanning=true;final int epoch=++scanEpoch;
+            int flags=NfcAdapter.FLAG_READER_NFC_A|NfcAdapter.FLAG_READER_NFC_B|NfcAdapter.FLAG_READER_NFC_F|NfcAdapter.FLAG_READER_NFC_V;
+            try {
+                a.enableReaderMode(act,tag->readTag(tag,epoch),flags,null);call.resolve();
+            }catch(RuntimeException e){scanning=false;call.reject("Could not start NFC reader","failed");}
+        });
+    }
+
+    private void readTag(Tag tag,int epoch){
+        if(!scanning||epoch!=scanEpoch)return;
+        JSObject result=new JSObject();StringBuilder serial=new StringBuilder();
+        for(byte b:tag.getId())serial.append(String.format("%02x",b&0xff));
+        result.put("serialNumber",serial.toString());JSArray urls=new JSArray();
+        Ndef ndef=Ndef.get(tag);
+        if(ndef!=null){
+            try {
+                ndef.connect();NdefMessage message=ndef.getNdefMessage();
+                if(message!=null)for(NdefRecord record:message.getRecords()){
+                    Uri uri=record.toUri();if(uri!=null&&uri.toString().length()<=2048&&urls.length()<8)urls.put(uri.toString());
+                }
+            }catch(Exception ignored){ /* A readable UID can identify a tag without an NDEF URL. */ }
+            finally{try{ndef.close();}catch(Exception ignored){}}
+        }
+        result.put("urls",urls);
+        if(scanning&&epoch==scanEpoch)notifyListeners("scan",result);
+    }
+
+    private void endScan(){
+        boolean wasScanning=scanning;scanning=false;scanEpoch++;
+        if(wasScanning)notifyListeners("scanStopped",new JSObject());
+    }
+
     @PluginMethod
     public void write(PluginCall call) {
         String url = call.getString("url");
@@ -108,6 +152,7 @@ public class NfcTagsPlugin extends Plugin {
         Activity act = getActivity();
         act.runOnUiThread(() -> {
             if (pending != null) pending.reject("replaced by a newer write", "cancelled");
+            endScan();
             pending = call;
             int flags = NfcAdapter.FLAG_READER_NFC_A | NfcAdapter.FLAG_READER_NFC_B | NfcAdapter.FLAG_READER_NFC_F
                     | NfcAdapter.FLAG_READER_NFC_V | NfcAdapter.FLAG_READER_NO_PLATFORM_SOUNDS;
@@ -117,6 +162,7 @@ public class NfcTagsPlugin extends Plugin {
 
     @PluginMethod
     public void cancel(PluginCall call) {
+        endScan();
         stopReader();
         if (pending != null) {
             pending.reject("cancelled", "cancelled");
@@ -128,6 +174,7 @@ public class NfcTagsPlugin extends Plugin {
     @Override
     protected void handleOnPause() {
         super.handleOnPause();
+        if(scanning){endScan();stopReader();}
         // Reader mode belongs to a resumed activity; a write left waiting ends with it.
         if (pending != null) {
             stopReader();
