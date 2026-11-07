@@ -49,3 +49,9 @@ References:
 - [Chrome Web NFC](https://developer.chrome.com/docs/capabilities/nfc)
 - [Android reader mode](https://developer.android.com/reference/android/nfc/NfcAdapter)
 - [Apple NFC tag readers](https://developer.apple.com/documentation/corenfc/building-an-nfc-tag-reader-app)
+
+
+Later verification: the unsigned iOS device archive compiled successfully on the
+macOS runner in [build 42294288279](https://github.com/TheFoxStudio/openSocialGym/actions/runs/42294288279).
+This verifies iOS compilation, not NFC hardware behavior. Android native compilation
+and physical NFC tests remain outstanding.
