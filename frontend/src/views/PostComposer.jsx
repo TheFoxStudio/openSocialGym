@@ -7,7 +7,7 @@ import { buildSocialSnapshot, socialWorkoutId,averageHeartRateOf } from '../lib/
 import { readDraft, saveDraft, deleteDraft, postRequestId, sendDraft } from '../lib/social-drafts.js'
 import { exOr } from '../lib/exercises.js'
 import { socialVolume } from '../lib/social-metrics.js'
-import { exerciseNameText,fmtNum,fmtVol } from '../lib/format.js'
+import { exerciseNameText,fmtNum,fmtVol,fmtDate } from '../lib/format.js'
 import { t } from '../lib/i18n.js'
 import { Button } from '../components/ui.jsx'
 import SocialGate from '../components/SocialGate.jsx'
@@ -166,7 +166,7 @@ function Composer({ source, postId, scope, user }) {
     {notice && <div className="card" role="status">{notice}</div>}
     {draft && !notice && !error && ['pending', 'failed'].includes(draft.status) && <div className="card" role="status">{draft.status === 'failed' ? t('Could not publish. Your draft is kept.') : busy ? t('Saving…') : t('Publishing queued. It will retry when this screen reconnects.')}</div>}
     {!loading && (draft || post) && <div className="card">
-      {draft?<><h2>{draft.snapshot.title||t('Workout')}</h2><dl className="post-metrics composer-metrics">
+      {draft?<><h2>{draft.snapshot.title||t('Workout')}</h2><p className="small dim">{fmtDate(draft.snapshot.date,true,true)}</p><dl className="post-metrics composer-metrics">
         <div><dt>{t('Exercises')}</dt><dd>{fmtNum(draft.snapshot.exercises.length)}</dd></div>
         <div><dt>{t('Volume')}</dt><dd>{fmtVol(Math.round(socialVolume(draft.snapshot).value),socialVolume(draft.snapshot).unit)}</dd></div>
         <div><dt>{t('PRs')}</dt><dd>{fmtNum(draft.snapshot.records||0)}</dd></div>

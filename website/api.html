@@ -502,7 +502,7 @@ main.api-main .lead { color: var(--fg-2); max-width: 58ch; margin: 14px 0 0; fon
     <span class="ep-sum">Following timeline including own shared workouts</span>
   </summary>
   <div class="ep-body">
-<p>Only self and currently followed authors; current audience, block and account policy is reapplied on every read. Descending creation time and ID. Opaque, authenticated encrypted cursors expire after one hour and bind the viewer and list. A publication sequence ceiling excludes later inserts during pagination. At most 200 candidate rows are scanned per page; an empty page can have a cursor.</p>
+<p>Only self and currently followed authors; current audience, block and account policy is reapplied on every read. Descending workout date, then publication time and ID. Opaque, authenticated encrypted cursors expire after one hour and bind the viewer and list. A publication sequence ceiling excludes later inserts during pagination. At most 200 candidate rows are scanned per page; an empty page can have a cursor.</p>
     <p class="ep-auth"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>Requires a session: the cookie set at sign-in, or <code>Authorization: Bearer &lt;token&gt;</code> from mobile-app pairing.</span></p>
 <p class="ep-h">Query parameters</p><div class="ptab">
   <div class="prow">
@@ -1108,7 +1108,7 @@ main.api-main .lead { color: var(--fg-2); max-width: 58ch; margin: 14px 0 0; fon
     <span class="ep-sum">List a profile's visible workout posts</span>
   </summary>
   <div class="ep-body">
-<p>Stable descending createdAt/id pagination, scoped to the viewer and author. Hidden posts are filtered under current policy, at most 200 candidates plus lookahead. Encrypted cursors expire after one hour and retain a publication ceiling.</p>
+<p>Stable descending snapshot.date/createdAt/id pagination, scoped to the viewer and author. Hidden posts are filtered under current policy, at most 200 candidates plus lookahead. Encrypted cursors expire after one hour and retain a publication ceiling.</p>
     <p class="ep-auth"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>Requires a session: the cookie set at sign-in, or <code>Authorization: Bearer &lt;token&gt;</code> from mobile-app pairing.</span></p>
 <p class="ep-h">Query parameters</p><div class="ptab">
   <div class="prow">

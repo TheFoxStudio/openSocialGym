@@ -12,11 +12,11 @@ accessible on its profile, but does not enter Following. Blocks, opt-out, disabl
 accounts, audience edits and deletions apply to each page, image and revalidation.
 The API never reads private training documents to build a feed.
 
-Pages sort by creation time descending, then ID descending. Opaque encrypted
+Pages sort by workout date descending, then publication time and ID descending. Opaque encrypted
 cursors bind the account and list, expire after one hour, and retain a publication
 sequence ceiling. New inserts cannot appear halfway through an older pagination
 session, even if timestamps tie or move backwards. Refresh starts a new session.
-Queries use the author/date index, consider only self/followed authors, and scan at
+Queries use the author/workout-date index, consider only self/followed authors, and scan at
 most 200 candidates per page; a filtered empty page may still have a next cursor.
 The API accepts 1–50 posts per page; the app requests ten and retains at most fifty.
 

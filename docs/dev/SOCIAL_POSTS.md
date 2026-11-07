@@ -200,3 +200,23 @@ before entering the composer. Cancelling an edit preserves the existing post.
 Verification: eight focused completion/draft tests and the web build passed.
 Isolated Edge checks covered the side-by-side summary, audience buttons, photo
 popup and Escape, cancellation without a publish request, and 320 px width.
+
+
+## Retroactive publication
+
+Publishing a saved or imported draft places it on the workout's snapshot.date,
+including past years. Home, profile posts and recent profile photos all sort by
+that calendar date, with actual publication time and ID breaking same-day ties.
+Cards display the workout date without timezone conversion; the composer shows
+it before publishing. createdAt remains the real publication timestamp for audit
+and export. Caption edits do not change it. Existing posts also use their stored
+workout date, so no republishing is required.
+
+Startup adds an index over existing snapshot dates without rewriting posts or
+changing schema version 5. Older pagination cursors require a refresh after the
+upgrade. A publication-sequence ceiling prevents newly published backdated posts
+from unexpectedly entering a pagination session already in progress. Pull down
+to start a fresh timeline session and include them.
+
+Verification: 12 focused backend checks and the web build passed, including
+backdated ordering, profile photos, caption edits and insertion during pagination.

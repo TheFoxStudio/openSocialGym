@@ -66,17 +66,17 @@ export function createPosts({ db, active, policy, transaction, dataDir, cursors,
     if (!active(viewer)) fail(401, 'not-signed-in', 'Not signed in.');
     if (author && (!profileExists(author) || !policy.canView(viewer, author))) fail(404, 'profile-missing', 'Profile not found.');
     if (!Number.isInteger(limit) || limit < 1 || limit > 50) fail(400, 'limit-invalid', 'Invalid page size.');
-    const context = JSON.stringify(['posts', viewer, author || 'feed']);
-    const position = cursor ? cursors.decode(cursor, context) : { time: Number.MAX_SAFE_INTEGER, id: 'z', ceiling: +db.prepare("SELECT value FROM social_meta WHERE key='post_sequence'").get().value };
-    if (!Number.isSafeInteger(position.time) || !Number.isSafeInteger(position.ceiling) || position.ceiling < 0 || typeof position.id !== 'string') fail(400, 'cursor-invalid', 'Reload this list to continue.');
+    const context = JSON.stringify(['posts-workout-date-v1', viewer, author || 'feed']);
+    const position = cursor ? cursors.decode(cursor, context) : { date:'9999-12-31', time: Number.MAX_SAFE_INTEGER, id: 'z', ceiling: +db.prepare("SELECT value FROM social_meta WHERE key='post_sequence'").get().value };
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(position.date) || !Number.isSafeInteger(position.time) || !Number.isSafeInteger(position.ceiling) || position.ceiling < 0 || typeof position.id !== 'string') fail(400, 'cursor-invalid', 'Reload this list to continue.');
     const target = author ? 'p.author_id=?' : 'p.author_id IN (SELECT followed_id FROM follows WHERE follower_id=? UNION SELECT ?)';
     const args = author ? [author] : [viewer, viewer];
-    const all = db.prepare(`SELECT p.* FROM posts p INDEXED BY posts_author_date WHERE ${target}
-      AND p.publication_seq<=? AND (p.created_at<? OR (p.created_at=? AND p.id<?)) ORDER BY p.created_at DESC,p.id DESC LIMIT 201`)
-      .all(...args, position.ceiling, position.time, position.time, position.id);
+    const all = db.prepare(`SELECT p.* FROM posts p INDEXED BY posts_author_workout_date WHERE ${target}
+      AND p.publication_seq<=? AND (json_extract(p.snapshot,'$.date'),p.created_at,p.id)<(?,?,?) ORDER BY json_extract(p.snapshot,'$.date') DESC,p.created_at DESC,p.id DESC LIMIT 201`)
+      .all(...args, position.ceiling, position.date, position.time, position.id);
     const posts = []; let scanned = 0, last;
     for (const p of all.slice(0, 200)) { scanned++; last = p; if (author ? visible(viewer, p) : inFeed(viewer, p)) posts.push(project(p, viewer)); if (posts.length === limit) break; }
-    return { viewerId: viewer, posts, nextCursor: scanned < all.length ? cursors.encode({ context, ceiling: position.ceiling, time: last.created_at, id: last.id }) : null };
+    return { viewerId: viewer, posts, nextCursor: scanned < all.length ? cursors.encode({ context, ceiling: position.ceiling, date:JSON.parse(last.snapshot).date, time: last.created_at, id: last.id }) : null };
   };
   return {
     reviewPost(id) { const p = row(id); return p ? project(p, '') : null; },
@@ -102,7 +102,7 @@ export function createPosts({ db, active, policy, transaction, dataDir, cursors,
     profileOverview(viewer, author) {
       if (!profileExists(author) || !policy.canView(viewer, author)) fail(404,'profile-missing','Profile not found.');
       let totalWorkouts=0,totalVolumeKg=0;const photos=[];
-      for(const p of db.prepare('SELECT * FROM posts WHERE author_id=? ORDER BY created_at DESC,id DESC').iterate(author)) {
+      for(const p of db.prepare("SELECT * FROM posts WHERE author_id=? ORDER BY json_extract(snapshot,'$.date') DESC,created_at DESC,id DESC").iterate(author)) {
         if(!visible(viewer,p))continue;
         totalWorkouts++;const volume=socialVolume(JSON.parse(p.snapshot),'kg');
         totalVolumeKg+=volume.value*(volume.unit==='lb'?0.45359237:1);

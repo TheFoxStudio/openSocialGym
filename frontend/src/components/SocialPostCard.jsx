@@ -33,13 +33,13 @@ export default function SocialPostCard({post,scope}) {
   const avatar=useImage(()=>avatarBlob(post.author),post.author?.avatarId,visible&&!gone,scope)
   const photo=useImage(()=>postPhotoBlob(post.id,post.assetId),post.assetId?post.id+':'+post.assetId+':'+post.revision:null,visible&&!gone,scope)
   const snapshot=post.snapshot,volume=socialVolume(snapshot,unit),open=()=>nav('/social/posts/'+post.id)
-  const date=new Date(post.createdAt),validDate=Number.isFinite(date.getTime())
+  const date=new Date(snapshot.date+'T12:00:00'),validDate=Number.isFinite(date.getTime())
   const metrics=[{label:t('Workout time'),value:snapshot.durationSec==null?'—':fmtDur(snapshot.durationSec*1000)},{label:t('Total volume'),value:fmtVol(Math.round(volume.value),volume.unit)},
     ...(snapshot.records>0?[{label:t('Records'),value:fmtNum(snapshot.records)}]:[]),...(snapshot.averageHeartRate?[{label:t('Avg. heart rate'),value:t('{0} bpm',fmtNum(snapshot.averageHeartRate))}]:[])]
   return <article className="card social-post-card" ref={ref}>{gone?<p>{t('This post is no longer available.')}</p>:<>
     <button type="button" className="post-author" onClick={()=>nav('/social/profiles/'+post.authorId)}>
       <span className="post-avatar">{avatar?<img src={avatar} alt="" />:(post.author?.displayName||'?').slice(0,1).toUpperCase()}</span>
-      <span><strong>{post.author?.displayName}</strong><time className="small dim" dateTime={validDate?date.toISOString():undefined}>{validDate?date.toLocaleString(dateLocale(),{dateStyle:'medium',timeStyle:'short'}):snapshot.date}</time></span>
+      <span><strong>{post.author?.displayName}</strong><time className="small dim" dateTime={snapshot.date}>{validDate?date.toLocaleDateString(dateLocale(),{dateStyle:'medium'}):snapshot.date}</time></span>
     </button>
     <button className="post-title" onClick={open}><h2>{snapshot.title||t('Workout')}</h2></button>
     {post.caption&&<p className="social-bio post-caption">{post.caption}</p>}

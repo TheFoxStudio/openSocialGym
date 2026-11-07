@@ -116,3 +116,20 @@ test('schema-three upgrade and an offline directory restore preserve posts, grap
     assert.equal(store.relationship('one', 'two').isFollowing, true);
   } finally { store?.close(); fs.rmSync(dir, { recursive: true, force: true }); fs.rmSync(restored, { recursive: true, force: true }); }
 });
+
+
+test('retroactive posts sort by workout day across feed, profile, photos and cursor pages',t=>{
+ const h=fixture(t),{s}=h;s.follow('one','two',true);
+ const publish=(source,date)=>{const assetId=crypto.randomUUID();s.putPostAsset('two',assetId,Buffer.from('photo'),source);const body=h.body('two',source,{assetId});body.snapshot.date=date;return s.publishPost('two',body)};
+ const recent=publish('recent','2026-11-06'),old=publish('imported-old','2024-02-14'),middle=publish('imported-middle','2025-07-20');
+ assert.ok(old.createdAt>=recent.createdAt); // Preserve actual publication time for audit/export.
+ const first=s.feed('one',{limit:1});assert.equal(first.posts[0].id,recent.id);
+ const inserted=publish('another-old-draft','2025-01-01');
+ const ids=[recent.id];let cursor=first.nextCursor;while(cursor){const page=s.feed('one',{limit:1,cursor});ids.push(...page.posts.map(p=>p.id));cursor=page.nextCursor}
+ assert.deepEqual(ids,[recent.id,middle.id,old.id]); // New publications never enter an in-progress cursor.
+ assert.deepEqual(s.feed('one').posts.map(p=>p.id),[recent.id,middle.id,inserted.id,old.id]);
+ assert.deepEqual(s.profilePosts('one','two').posts.map(p=>p.id),[recent.id,middle.id,inserted.id,old.id]);
+ assert.deepEqual(s.profileOverview('one','two').photos.map(p=>p.id),[recent.id,middle.id,inserted.id,old.id]);
+ s.editPost('two',old.id,h.body('two','imported-old',{revision:old.revision,assetId:old.assetId,snapshot:old.snapshot,caption:'Caption edit'}));
+ assert.equal(s.getPost('one',old.id).createdAt,old.createdAt);assert.equal(s.feed('one').posts.at(-1).id,old.id);
+});

@@ -263,7 +263,7 @@ paths:
       summary: Following timeline including own shared workouts
       description: >-
         Only self and currently followed authors; current audience, block and account
-        policy is reapplied on every read. Descending creation time and ID. Opaque,
+        policy is reapplied on every read. Descending workout date, then publication time and ID. Opaque,
         authenticated encrypted cursors expire after one hour and bind the viewer and
         list. A publication sequence ceiling excludes later inserts during pagination.
         At most 200 candidate rows are scanned per page; an empty page can have a cursor.
@@ -537,7 +537,7 @@ paths:
       parameters:
         - { $ref: '#/components/parameters/SocialCursor' }
         - { $ref: '#/components/parameters/SocialLimit' }
-      description: Stable descending createdAt/id pagination, scoped to the viewer and author. Hidden posts are filtered under current policy, at most 200 candidates plus lookahead. Encrypted cursors expire after one hour and retain a publication ceiling.
+      description: Stable descending snapshot.date/createdAt/id pagination, scoped to the viewer and author. Hidden posts are filtered under current policy, at most 200 candidates plus lookahead. Encrypted cursors expire after one hour and retain a publication ceiling.
       responses:
         '200':
           description: Post page

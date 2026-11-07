@@ -129,6 +129,8 @@ export function createSocialStore({ dataDir, accountExists, accountVisible = acc
         PRAGMA user_version=5; COMMIT;`);
     } catch(e) { try { db.exec('ROLLBACK'); } catch {} db.close(); throw e; }
   }
+  // Index existing snapshots without changing publication timestamps or request IDs.
+  db.exec("CREATE INDEX IF NOT EXISTS posts_author_workout_date ON posts(author_id,json_extract(snapshot,'$.date') DESC,created_at DESC,id DESC)");
   const cursors = createCursorCodec(db.prepare("SELECT value FROM social_meta WHERE key='cursor_key'").get().value);
   const row = uid => active(uid) ? db.prepare('SELECT * FROM profiles WHERE account_id=?').get(uid) : null;
   const project = r => r ? { id: r.account_id, handle: r.handle, displayName: r.display_name, bio: r.bio,
