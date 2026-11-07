@@ -1,0 +1,83 @@
+﻿name: Build openSocialGym iOS
+on:
+  workflow_dispatch:
+    inputs:
+      bundle_id:
+        description: Your own registered Apple bundle ID
+        required: true
+        default: space.orktork.opensocialgym
+        type: string
+      build_number:
+        description: Unique positive build number (blank uses workflow run number)
+        default: ''
+        type: string
+permissions:
+  contents: read
+jobs:
+  archive:
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Configure fork identity
+        env:
+          BUNDLE_ID: ${{ inputs.bundle_id }}
+          BUILD_NUMBER: ${{ inputs.build_number || github.run_number }}
+        run: node scripts/ios/configure-fork.mjs "$BUNDLE_ID" "$BUILD_NUMBER"
+      - run: npm ci
+        working-directory: frontend
+      - name: Build and stage phone assets
+        working-directory: frontend
+        env:
+          VITE_MOBILE: '1'
+          APP_BUILD: ${{ github.sha }}
+        run: |
+          npm run build
+          node ../scripts/catalogue/stage-media.mjs dist
+          npx cap sync ios
+          node scripts/check-mobile-bundle.mjs
+      - name: Add native extensions
+        working-directory: frontend
+        run: |
+          ruby ios/ci/add-asset-downloader.rb
+          ruby ios/ci/add-watch-app.rb
+          ruby ios/ci/add-widgets.rb
+      - name: Compile unsigned device archive
+        working-directory: frontend/ios/App
+        run: |
+          set -o pipefail
+          mkdir -p build
+          xcodebuild -version
+          xcodebuild -workspace App.xcworkspace -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath build/openSocialGym.xcarchive \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY='' archive \
+            > build/archive.log 2>&1 || { tail -100 build/archive.log; exit 1; }
+          test -d build/openSocialGym.xcarchive/Products/Applications/App.app
+      - name: Package unsigned outputs
+        env:
+          BUNDLE_ID: ${{ inputs.bundle_id }}
+        run: |
+          mkdir -p artifacts/ios/Payload
+          cp -R frontend/ios/App/build/openSocialGym.xcarchive/Products/Applications/App.app artifacts/ios/Payload/
+          cd artifacts/ios
+          zip -qry openSocialGym-unsigned.ipa Payload
+          rm -rf Payload
+          ditto -c -k --sequesterRsrc --keepParent ../../frontend/ios/App/build/openSocialGym.xcarchive openSocialGym.xcarchive.zip
+          printf 'UNSIGNED: not installable or uploadable to TestFlight.\nCommit: %s\nBundle ID: %s\n' "$GITHUB_SHA" "$BUNDLE_ID" > BUILD-INFO.txt
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        if: success()
+        with:
+          name: openSocialGym-ios-unsigned
+          path: artifacts/ios/*
+          retention-days: 14
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        if: failure()
+        with:
+          name: openSocialGym-ios-build-log
+          path: frontend/ios/App/build/archive.log
+          retention-days: 7

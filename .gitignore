@@ -49,3 +49,6 @@ assets/tee/
 assets/bmc-cover*
 # scripts/pdf/render-samples.mjs output (npm run pdf:check)
 frontend/pdf-samples/
+
+# Local iOS CI downloads and signed release exports
+/artifacts/ios/
